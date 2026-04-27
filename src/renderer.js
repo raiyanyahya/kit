@@ -1405,11 +1405,11 @@ addFolderBtn?.addEventListener('click', async () => {
 async function updateGitInfo() {
   if (!termCwd || !gitInfo) { return }
   try {
-    const check = await window.kit.run(termCwd, 'git rev-parse --is-inside-work-tree')
+    const check = await window.kit.exec(termCwd, 'git rev-parse --is-inside-work-tree')
     if (!check.output || !/true/.test(check.output)) { gitInfo.textContent = ''; return }
-    const branch = (await window.kit.run(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0]
-    const sha = (await window.kit.run(termCwd, 'git rev-parse --short HEAD')).output.trim().split('\n')[0]
-    const status = (await window.kit.run(termCwd, 'git status --porcelain=v1 -b')).output
+    const branch = (await window.kit.exec(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0]
+    const sha = (await window.kit.exec(termCwd, 'git rev-parse --short HEAD')).output.trim().split('\n')[0]
+    const status = (await window.kit.exec(termCwd, 'git status --porcelain=v1 -b')).output
     let ahead = 0, behind = 0, modified = 0, untracked = 0
     const lines = status.split('\n').filter(Boolean)
     if (lines.length) {
@@ -2956,7 +2956,7 @@ Examples:
         const st2 = await window.kit.stat(attachPath);
         if (st2 && st2.ok) {
           if (st2.isDir) {
-            const ls = await window.kit.run(attachPath, 'ls -1');
+            const ls = await window.kit.exec(attachPath, 'ls -1');
             const names = (ls.output || '').split('\n').filter(Boolean);
             for (const nm of names) {
               const p = (attachPath.replace(/\/+$/, '') + '/' + nm);
@@ -3939,10 +3939,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Ensure .Kit folder exists
     await window.kit.ensureFolder();
 
-    // Resolve README path
-    const kitEditorResult = await window.kit.getDefaultDir();
-    const kitEditorPath = typeof kitEditorResult === 'string' ? kitEditorResult : (kitEditorResult.path || kitEditorResult);
-    const readmePath = kitEditorPath + '/README.md';
+    // Resolve README path — bundled with the app at its root
+    const readmeResult = await window.kit.getReadmePath();
+    const readmePath = readmeResult?.path || '';
 
     // Session restore — if a previous session exists, reopen that file
     let sessionRestored = false;
@@ -4073,7 +4072,7 @@ document.addEventListener('keydown', async (e) => {
     if (!cwd) return;
     const pattern = `function ${word}|const ${word} =|let ${word} =|var ${word} =|class ${word}|def ${word}|export function ${word}|${word}\\s*\\(`;
     try {
-      const result = await window.kit.run(cwd, `grep -rn -E "${pattern.replace(/"/g, '\\"')}" --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.java" --include="*.rb" 2>/dev/null | head -20`);
+      const result = await window.kit.exec(cwd, `grep -rn -E "${pattern.replace(/"/g, '\\"')}" --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.java" --include="*.rb" 2>/dev/null | head -20`);
       await showDefinitionResults(word, result.output || result.stdout || '');
     } catch (err) {
       const out = document.getElementById('termOut');
@@ -4123,8 +4122,8 @@ window.addEventListener('beforeunload', saveSession);
 async function handleCommand(value) {
   try {
     if (!value || !value.trim()) return;
-    if (window.kit && window.kit.run) {
-      await window.kit.run(value.trim());
+    if (window.kit && window.kit.exec) {
+      await window.kit.exec(value.trim());
     } else {
     }
   } catch (e) {
@@ -4349,15 +4348,15 @@ async function refreshGitPanel() {
   if (!termCwd) return;
   try {
     // Branches
-    const branchRes = await window.kit.run(termCwd, 'git branch');
-    const currentBranch = (await window.kit.run(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0];
+    const branchRes = await window.kit.exec(termCwd, 'git branch');
+    const currentBranch = (await window.kit.exec(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0];
     const branchSelect = document.getElementById('gitBranchSelect');
     if (branchSelect && branchRes.ok) {
       const branches = branchRes.output.split('\n').map(b => b.replace(/^\*\s*/, '').trim()).filter(Boolean);
       branchSelect.innerHTML = branches.map(b => `<option value="${escapeHtml(b)}"${b === currentBranch ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
       branchSelect.onchange = async () => {
         const log = document.getElementById('gitLogOutput');
-        const r = await window.kit.run(termCwd, `git checkout ${branchSelect.value}`);
+        const r = await window.kit.exec(termCwd, `git checkout ${branchSelect.value}`);
         if (log) log.textContent = r.output;
         await refreshGitPanel();
         updateGitInfo();
@@ -4365,7 +4364,7 @@ async function refreshGitPanel() {
     }
 
     // Changed files
-    const statusRes = await window.kit.run(termCwd, 'git status --porcelain');
+    const statusRes = await window.kit.exec(termCwd, 'git status --porcelain');
     const fileList = document.getElementById('gitFileList');
     if (fileList) {
       fileList.innerHTML = '';
@@ -4397,7 +4396,7 @@ async function refreshGitPanel() {
             if (!diff) return;
             li.classList.toggle('git-file-active');
             fileList.querySelectorAll('.git-file-item').forEach(el => { if (el !== li) el.classList.remove('git-file-active'); });
-            const r = await window.kit.run(termCwd, `git diff -- "${fname}"`);
+            const r = await window.kit.exec(termCwd, `git diff -- "${fname}"`);
             diff.innerHTML = '';
             const lines2 = (r.output || 'No diff').split('\n');
             lines2.forEach(dl => {
@@ -4444,8 +4443,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const checked = fileList ? [...fileList.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value) : [];
     if (!checked.length) { alert('No files selected.'); return; }
     const addCmd = checked.map(f => `git add -- "${f}"`).join(' && ');
-    const r1 = await window.kit.run(termCwd, addCmd);
-    const r2 = await window.kit.run(termCwd, `git commit -m "${msg.replace(/"/g, '\\"')}"`);
+    const r1 = await window.kit.exec(termCwd, addCmd);
+    const r2 = await window.kit.exec(termCwd, `git commit -m "${msg.replace(/"/g, '\\"')}"`);
     _gitLog(((r1.output || '') + '\n' + (r2.output || '')).trim());
     if (document.getElementById('gitCommitMsg')) document.getElementById('gitCommitMsg').value = '';
     await refreshGitPanel();
@@ -4454,14 +4453,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('gitPullBtn')?.addEventListener('click', async () => {
     _gitLog('Pulling…');
-    const r = await window.kit.run(termCwd, 'git pull');
+    const r = await window.kit.exec(termCwd, 'git pull');
     _gitLog(r.output || r.error || 'Done');
     updateGitInfo();
   });
 
   document.getElementById('gitPushBtn')?.addEventListener('click', async () => {
     _gitLog('Pushing…');
-    const r = await window.kit.run(termCwd, 'git push');
+    const r = await window.kit.exec(termCwd, 'git push');
     _gitLog(r.output || r.error || 'Done');
     updateGitInfo();
   });
@@ -5795,13 +5794,13 @@ async function agentExecuteTool(name, argsObj) {
       }
       case 'run_command': {
         const cwd = termCwd || '/';
-        const res = await window.kit.run(cwd, argsObj.command);
+        const res = await window.kit.exec(cwd, argsObj.command);
         return res.output || '(no output)';
       }
       case 'search_project': {
         const cwd = termCwd || '/';
         const q = argsObj.query.replace(/'/g, "'\\''");
-        const res = await window.kit.run(cwd, `grep -rn '${q}' . 2>/dev/null | head -60`);
+        const res = await window.kit.exec(cwd, `grep -rn '${q}' . 2>/dev/null | head -60`);
         return res.output || '(no matches)';
       }
       default:

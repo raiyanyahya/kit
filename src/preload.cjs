@@ -14,6 +14,7 @@ const api = {
   mkdir: (d)=> ipcRenderer.invoke('fs:mkdir', d),
   delete: (p)=> ipcRenderer.invoke('fs:delete', p),
   run: (cwd, cmd)=> ipcRenderer.invoke('term:run', cwd, cmd),
+  exec: (cwd, cmd)=> ipcRenderer.invoke('term:exec', cwd, cmd),
   onTermOutput: (cb)=> ipcRenderer.on('term:output', (_e, data)=> cb(data)),
   setEnv: (key, value)=> ipcRenderer.invoke('term:setEnv', key, value),
   getEnv: (key)=> ipcRenderer.invoke('term:getEnv', key),
@@ -39,8 +40,7 @@ const api = {
   loadBoard: ()=> ipcRenderer.invoke('kit:loadBoard'),
   saveBoard: (data)=> ipcRenderer.invoke('kit:saveBoard', data),
   captureBoard: (rect)=> ipcRenderer.invoke('kit:captureBoard', rect),
-  createReadme: ()=> ipcRenderer.invoke('kit:createReadme'),
-  getDefaultDir: ()=> ipcRenderer.invoke('kit:getDefaultDir'),
+  getReadmePath: ()=> ipcRenderer.invoke('kit:getReadmePath'),
   stairs: {
     list:      ()         => ipcRenderer.invoke('stairs:list'),
     save:      (s)        => ipcRenderer.invoke('stairs:save', s),

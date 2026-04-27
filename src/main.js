@@ -80,126 +80,9 @@ ipcMain.handle('kit:captureBoard', async (_e, rect) => {
   return { ok: true, filePath };
 });
 
-ipcMain.handle('kit:createReadme', async () => {
-  const homeDir = os.homedir();
-  const kitDir = path.join(homeDir, '.Kit');
-  const readmePath = path.join(kitDir, 'README.md');
-  
-  const readmeContent = `# 🦋 Kit
-*Your complete workspace for developers, writers, and curious minds.*
 
----
-
-## ✨ Welcome
-
-Kit brings together a code editor, browser, AI assistant, agentic AI, terminal, git panel, calendar, email client, whiteboard, and workflow automation — all in one quiet, keyboard-first application. No context-switching. No clutter. Just flow.
-
----
-
-## 🚀 Getting Started
-
-1. **Explore the sidebar** — toggle it with **⌘E** / **Ctrl+E**
-2. **Try the modes** — click the toolbar icons or use the shortcuts below
-3. **Set your AI keys** — click the key icon in the status bar (OpenAI and/or Anthropic)
-4. **Press ⌘K** — the fastest way to find any file or run any command
-
----
-
-## 🎯 Modes
-
-| Mode | Shortcut | What it's for |
-|------|----------|---------------|
-| **Editor** | **Ctrl+0** | Code, config, markdown — the main workspace |
-| **Browser** | **Ctrl+B** | Integrated Chromium browser with AI page analysis |
-| **Whiteboard** | **Ctrl+W** | Freehand drawing and visual thinking |
-| **Kit Agent** | **Ctrl+Shift+A** | Autonomous AI agent with file & shell access |
-| **Stairs** | **Ctrl+Shift+R** | Visual step-by-step workflow automation |
-| **Email** | **Ctrl+M** | Built-in IMAP/SMTP email client |
-| **Calendar** | toolbar | Event management, saved to \`~/.Kit/calendar.json\` |
-
----
-
-## ⌨️ Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| **⌘K** / **Ctrl+K** | Project search — find any file instantly |
-| **⌘D** / **Ctrl+D** | Toggle light / dark theme |
-| **⌘B** / **Ctrl+B** | Browser mode |
-| **⌘W** / **Ctrl+W** | Whiteboard |
-| **⌘M** / **Ctrl+M** | Email |
-| **⌘E** / **Ctrl+E** | Toggle sidebar |
-| **⌘0** / **Ctrl+0** | Return to editor |
-| **⌘⇧A** / **Ctrl+Shift+A** | Kit Agent |
-| **⌘⇧R** / **Ctrl+Shift+R** | Stairs |
-| **⌘⇧P** / **Ctrl+Shift+P** | Command palette |
-
----
-
-## 🤖 AI Features
-
-Kit connects to **OpenAI** and **Anthropic** simultaneously. Set your keys from the status bar — they are stored encrypted via Electron's \`safeStorage\`.
-
-**Inline AI (status bar):**
-- Check for errors, summarise, generate tests — one click on the current file
-- Prefix your terminal input with \`ai\` to ask anything in context
-
-**Kit Agent:**
-- Give it a task in plain English — it breaks work into steps, reads and writes files, runs shell commands, and reports results
-- Supports both OpenAI (gpt-5.4, o3, o4-mini) and Anthropic (Claude Sonnet / Opus) models
-- Add a \`.kitrules\` or \`AGENT.md\` file to any project folder to give the agent project-specific instructions
-
-**Stairs (workflow automation):**
-- Chain AI prompts, shell commands, HTTP requests, and file operations into reusable pipelines
-- Build workflows visually, run with one click
-
----
-
-## 📁 Workspace
-
-\`\`\`
-📂 ~/.Kit/
-├── 📄 README.md        ← this file
-├── 📂 projects/        ← agent-created projects
-├── 📂 notes/           ← text notes and documents
-├── 📂 data/            ← data files and datasets
-├── 📂 scratch/         ← quick experiments
-├── 📂 boards/          ← whiteboard saves
-├── 📂 stairs/          ← saved workflows
-└── 📄 calendar.json    ← calendar events
-\`\`\`
-
----
-
-## 🎨 Themes
-
-**⌘D / Ctrl+D** toggles light and dark. Kit respects your system preference on first launch.
-
----
-
-*Welcome to Kit — where every tool you need is one keystroke away.* ✨
-`;
-
-  try {
-    // Check if file already exists
-    try {
-      await fs.promises.access(readmePath);
-      return { ok: true, path: readmePath, existed: true };
-    } catch (e) {
-      // File doesn't exist, create it
-    }
-    
-    await fs.promises.writeFile(readmePath, readmeContent, 'utf8');
-    return { ok: true, path: readmePath, created: true };
-  } catch (error) {
-    return { ok: false, error: error.message };
-  }
-});
-
-ipcMain.handle('kit:getDefaultDir', async () => {
-  const homeDir = os.homedir();
-  const kitDir = path.join(homeDir, '.Kit');
-  return { ok: true, path: kitDir };
+ipcMain.handle('kit:getReadmePath', () => {
+  return { ok: true, path: path.join(app.getAppPath(), 'README.md') };
 });
 
 try { app.setName('Kit') } catch(_) {}
@@ -347,6 +230,10 @@ ipcMain.handle('term:run', async (_e, cwd, command)=>{
     proc.on('close', (code)=>{ clearTimeout(timeout); resolve({ ok: code === 0, output: '' }); });
     proc.on('error', (e)=>{ clearTimeout(timeout); resolve({ ok: false, output: '! ' + e.message + '\n' }); });
   });
+})
+
+ipcMain.handle('term:exec', async (_e, cwd, command)=>{
+  return new Promise((resolve)=>{ exec(command, { cwd, shell:true, env: terminalEnv, maxBuffer:10*1024*1024 }, (err, stdout, stderr)=>{ const out = (stdout||'') + (stderr||''); resolve({ ok: !err, output: out || (err? String(err):'') }) }) })
 })
 
 const BLOCKED_ENV_KEYS = new Set(['LD_PRELOAD','LD_LIBRARY_PATH','DYLD_INSERT_LIBRARIES','DYLD_LIBRARY_PATH','NODE_OPTIONS','NODE_PATH','ELECTRON_RUN_AS_NODE']);
