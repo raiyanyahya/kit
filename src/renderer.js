@@ -1404,22 +1404,29 @@ addFolderBtn?.addEventListener('click', async () => {
 
 // ===== Git status =====
 async function updateGitInfo() {
-  if (!termCwd || !gitInfo) { return }
+  if (!termCwd || !gitInfo) return;
   try {
-    const check = await window.kit.exec(termCwd, 'git rev-parse --is-inside-work-tree')
-    if (!check.output || !/true/.test(check.output)) { gitInfo.textContent = ''; return }
-    const branch = (await window.kit.exec(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0]
-    const sha = (await window.kit.exec(termCwd, 'git rev-parse --short HEAD')).output.trim().split('\n')[0]
-    const status = (await window.kit.exec(termCwd, 'git status --porcelain=v1 -b')).output
-    let ahead = 0, behind = 0, modified = 0, untracked = 0
-    const lines = status.split('\n').filter(Boolean)
-    if (lines.length) {
-      const mA = lines[0].match(/ahead\s+(\d+)/); if (mA) ahead = +mA[1]
-      const mB = lines[0].match(/behind\s+(\d+)/); if (mB) behind = +mB[1]
-      for (let i = 1; i < lines.length; i++) { const l = lines[i]; if (l.startsWith('??')) untracked++; else modified++ }
-    }
-    gitInfo.innerHTML = `<span style="vertical-align:-2px;margin-right:3px;opacity:.7">${ICON.gitBranch}</span>${branch} @ ${sha}${ahead || behind ? ` • ↑${ahead} ↓${behind}` : ''}${(modified || untracked) ? ` • Δ${modified} +${untracked}` : ''}`
-  } catch (_) { gitInfo.textContent = '' }
+    const branchRes = await window.kit.exec(termCwd, 'git rev-parse --abbrev-ref HEAD 2>/dev/null');
+    if (!branchRes.ok || !branchRes.output.trim()) { gitInfo.textContent = ''; return; }
+    const branch = branchRes.output.trim().split('\n')[0];
+    if (branch === 'HEAD') { gitInfo.textContent = ''; return; } // detached HEAD — skip
+
+    const sha = (await window.kit.exec(termCwd, 'git rev-parse --short HEAD 2>/dev/null')).output.trim().split('\n')[0];
+
+    // ahead/behind via rev-list — works on all git versions, no parsing ambiguity
+    const aheadOut  = (await window.kit.exec(termCwd, 'git rev-list --count @{u}..HEAD 2>/dev/null')).output.trim();
+    const behindOut = (await window.kit.exec(termCwd, 'git rev-list --count HEAD..@{u} 2>/dev/null')).output.trim();
+    const ahead  = /^\d+$/.test(aheadOut)  ? +aheadOut  : 0;
+    const behind = /^\d+$/.test(behindOut) ? +behindOut : 0;
+
+    // modified/untracked via plain --porcelain (no version flag)
+    const statusLines = (await window.kit.exec(termCwd, 'git status --porcelain 2>/dev/null')).output
+      .split('\n').filter(Boolean);
+    let modified = 0, untracked = 0;
+    for (const l of statusLines) { if (l.startsWith('??')) untracked++; else modified++; }
+
+    gitInfo.innerHTML = `<span style="vertical-align:-2px;margin-right:3px;opacity:.7">${ICON.gitBranch}</span>${branch} @ ${sha}${ahead || behind ? ` • ↑${ahead} ↓${behind}` : ''}${modified || untracked ? ` • Δ${modified} +${untracked}` : ''}`;
+  } catch (_) { /* keep existing badge on transient errors */ }
 }
 
 // ===== Terminal =====
