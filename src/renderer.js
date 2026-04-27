@@ -4356,6 +4356,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('settingAiWebSearch')?.addEventListener('change', aiCtxChange('webSearch'));
 });
 
+// Poll git status every 15 seconds so the badge always reflects reality
+setInterval(() => updateGitInfo(), 15000);
+
 // ===== Git Panel =====
 function openGitPanel() {
   if (!termCwd) return;
@@ -4481,16 +4484,18 @@ document.addEventListener('DOMContentLoaded', () => {
     _gitLog('Pulling…');
     const r = await window.kit.exec(termCwd, 'git pull');
     _gitLog(r.output || 'Done');
-    updateGitInfo();
-    setTimeout(() => { refreshGitPanel(); }, 200);
+    await refreshGitPanel();
+    await updateGitInfo();
+    setTimeout(() => updateGitInfo(), 1500);
   });
 
   document.getElementById('gitPushBtn')?.addEventListener('click', async () => {
     _gitLog('Pushing…');
     const r = await window.kit.exec(termCwd, 'git push');
     _gitLog(r.output || 'Done');
-    updateGitInfo();
-    setTimeout(() => { refreshGitPanel(); }, 200);
+    await refreshGitPanel();
+    await updateGitInfo();
+    setTimeout(() => updateGitInfo(), 1500);
   });
 
   // Make git status bar clickable
