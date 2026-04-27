@@ -1,0 +1,7 @@
+node_modules/
+dist/
+out/
+src/renderer.bundle.js
+src/renderer.bundle.js.map
+.DS_Store
+*.log

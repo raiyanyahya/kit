@@ -1,0 +1,4 @@
+#Before building dmg with the mac mac app sh run the below 
+
+npm install --no-save electron-icon-builder
+npx electron-icon-builder --input=icon.png --output=build

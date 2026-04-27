@@ -1,0 +1,80 @@
+{
+  "name": "jack",
+  "version": "1.9.60",
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "build": "esbuild src/renderer.js --bundle --format=esm --platform=browser --outfile=src/renderer.bundle.js --sourcemap",
+    "build:prod": "esbuild src/renderer.js --bundle --format=esm --platform=browser --outfile=src/renderer.bundle.js --minify --tree-shaking=true",
+    "dev": "npm run build && electron .",
+    "start": "electron .",
+    "postinstall": "electron-builder install-app-deps",
+    "dist:mac": "npm run build:prod && electron-builder --mac --publish never"
+  },
+  "build": {
+    "appId": "com.jack.workspace",
+    "productName": "Jack",
+    "icon": "icon.png",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "!src/renderer.js",
+      "!src/renderer.bundle.js.map",
+      "icons/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developertools",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "target": [
+        { "target": "dmg", "arch": ["universal"] }
+      ]
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "icon": "icon.png",
+      "background": null,
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "compression": "maximum"
+  },
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9",
+    "esbuild": "^0.27.3"
+  },
+  "dependencies": {
+    "@codemirror/commands": "latest",
+    "@codemirror/lang-cpp": "latest",
+    "@codemirror/lang-css": "latest",
+    "@codemirror/lang-html": "latest",
+    "@codemirror/lang-java": "latest",
+    "@codemirror/lang-javascript": "latest",
+    "@codemirror/lang-json": "latest",
+    "@codemirror/lang-markdown": "latest",
+    "@codemirror/lang-php": "latest",
+    "@codemirror/lang-python": "latest",
+    "@codemirror/lang-rust": "latest",
+    "@codemirror/lang-sql": "latest",
+    "@codemirror/lang-xml": "latest",
+    "@codemirror/lang-yaml": "latest",
+    "@codemirror/language": "latest",
+    "@codemirror/legacy-modes": "latest",
+    "@codemirror/search": "latest",
+    "@codemirror/state": "latest",
+    "@codemirror/theme-one-dark": "latest",
+    "@codemirror/view": "latest",
+    "imapflow": "^1.2.10",
+    "mailparser": "^3.9.3",
+    "node-fetch": "^3.3.2",
+    "node-pty": "^1.0.0",
+    "nodemailer": "^8.0.1",
+    "openai": "^6.22.0"
+  }
+}

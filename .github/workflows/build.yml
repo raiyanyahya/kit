@@ -1,0 +1,111 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Step 1: compute the next version ──────────────────────────────────────
+  prepare:
+    name: Bump version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      tag:     ${{ steps.bump.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute next patch version
+        id: bump
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get latest release tag, fall back to package.json version
+          LATEST=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          if [ -z "$LATEST" ]; then
+            LATEST="v$(node -p "require('./package.json').version")"
+          fi
+          echo "Latest tag: $LATEST"
+
+          # Strip leading 'v', split, increment patch
+          VERSION="${LATEST#v}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          NEW_TAG="v${NEW_VERSION}"
+
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$NEW_TAG"         >> "$GITHUB_OUTPUT"
+
+  # ── Step 2a: build macOS DMG ───────────────────────────────────────────────
+  build-mac:
+    name: macOS DMG
+    needs: prepare
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11 (node-gyp needs distutils)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          npm_config_python: python3.11
+
+      - name: Set version
+        run: npm version ${{ needs.prepare.outputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Build (minified production bundle)
+        run: npm run build:prod
+
+      - name: Package DMG
+        run: npx electron-builder --mac --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-dmg
+          path: dist/*.dmg
+          retention-days: 7
+
+  # ── Step 3: publish GitHub Release ────────────────────────────────────────
+  release:
+    name: Publish Release
+    needs: [prepare, build-mac]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release ${{ needs.prepare.outputs.tag }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Jack ${{ needs.prepare.outputs.tag }}
+          generate_release_notes: true
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
