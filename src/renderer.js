@@ -4457,15 +4457,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('gitPullBtn')?.addEventListener('click', async () => {
     _gitLog('Pulling…');
     const r = await window.kit.exec(termCwd, 'git pull');
-    _gitLog(r.output || r.error || 'Done');
-    updateGitInfo();
+    _gitLog(r.output || 'Done');
+    await refreshGitPanel();
+    await updateGitInfo();
   });
 
   document.getElementById('gitPushBtn')?.addEventListener('click', async () => {
     _gitLog('Pushing…');
     const r = await window.kit.exec(termCwd, 'git push');
-    _gitLog(r.output || r.error || 'Done');
-    updateGitInfo();
+    _gitLog(r.output || 'Done');
+    await refreshGitPanel();
+    await updateGitInfo();
   });
 
   // Make git status bar clickable
