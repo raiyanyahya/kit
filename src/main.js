@@ -223,9 +223,10 @@ ipcMain.handle('term:run', async (_e, cwd, command)=>{
   return new Promise((resolve)=>{
     const win = BrowserWindow.getAllWindows()[0];
     const send = (chunk) => { try { win?.webContents.send('term:output', chunk) } catch(_){} };
-    const proc = spawn(command, [], { cwd, shell: true, env: terminalEnv });
+    const proc = spawn(command, [], { cwd, shell: true, env: terminalEnv, detached: true });
     runningTermProc = proc;
-    const timeout = setTimeout(()=>{ proc.kill(); runningTermProc = null; resolve({ ok: false, output: '! Command timed out\n' }) }, 120_000);
+    const killProc = () => { try { process.kill(-proc.pid, 'SIGINT'); } catch(_) { try { proc.kill(); } catch(__){} } };
+    const timeout = setTimeout(()=>{ killProc(); runningTermProc = null; resolve({ ok: false, output: '! Command timed out\n' }) }, 120_000);
     proc.stdout.on('data', (d)=> send(d.toString()));
     proc.stderr.on('data', (d)=> send(d.toString()));
     proc.on('close', (code)=>{ clearTimeout(timeout); runningTermProc = null; resolve({ ok: code === 0, output: '' }); });
@@ -235,7 +236,7 @@ ipcMain.handle('term:run', async (_e, cwd, command)=>{
 
 ipcMain.handle('term:kill', ()=>{
   if (runningTermProc) {
-    try { runningTermProc.kill('SIGINT'); } catch(_) { try { runningTermProc.kill(); } catch(__){} }
+    try { process.kill(-runningTermProc.pid, 'SIGINT'); } catch(_) { try { runningTermProc.kill(); } catch(__){} }
     runningTermProc = null;
     return { ok: true };
   }
