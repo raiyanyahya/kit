@@ -4476,16 +4476,16 @@ document.addEventListener('DOMContentLoaded', () => {
     _gitLog('Pulling…');
     const r = await window.kit.exec(termCwd, 'git pull');
     _gitLog(r.output || 'Done');
-    try { await refreshGitPanel(); } catch(_) {}
-    await updateGitInfo();
+    updateGitInfo();
+    setTimeout(() => { refreshGitPanel(); }, 200);
   });
 
   document.getElementById('gitPushBtn')?.addEventListener('click', async () => {
     _gitLog('Pushing…');
     const r = await window.kit.exec(termCwd, 'git push');
     _gitLog(r.output || 'Done');
-    try { await refreshGitPanel(); } catch(_) {}
-    await updateGitInfo();
+    updateGitInfo();
+    setTimeout(() => { refreshGitPanel(); }, 200);
   });
 
   // Make git status bar clickable
