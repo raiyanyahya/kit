@@ -1495,18 +1495,16 @@ function normPath(p) { const parts = []; for (const seg of p.split('/')) { if (!
 async function initCwd() {
   try {
     const home = await window.kit.homeDir();
-    termCwd = home || '/';
+    // Only set termCwd if DOMContentLoaded hasn't set it yet (starred folder / session)
+    const didSet = !termCwd;
+    if (didSet) termCwd = home || '/';
     const outEl = document.getElementById('termOut');
     if (outEl) {
       outEl.textContent = (outEl.textContent || '') + "Type 'help' for built-ins.\n";
     }
     updateStatus();
-    refreshSidebar();
-    updateGitInfo();
-    updateSideHeaderToCwd();
-  } catch (_) {
-    // Ignore init errors
-  }
+    if (didSet) { refreshSidebar(); updateGitInfo(); updateSideHeaderToCwd(); }
+  } catch (_) {}
 }
 initCwd()
 updateSideHeaderToCwd()
@@ -3994,6 +3992,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const result = await window.kit.readFile(readmePath);
         if (result && result.ok) openFileInTab(readmePath, result.data);
       } catch(_) {}
+    }
+
+    // Re-enforce starred folder as termCwd — initCwd() may have raced and overwritten it
+    if (starredFolder) {
+      termCwd = starredFolder;
+      updateSideHeaderToCwd();
+      refreshSidebar();
     }
 
   } catch (e) {
