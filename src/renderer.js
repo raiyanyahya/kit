@@ -202,6 +202,7 @@ const browserUrlBar = $('#browserUrlBar')
 const sideHeaderTitle = document.querySelector('#sidebar .sidebar-header .title')
 
 let currentFile = null, editor = null, dirty = false, termCwd = null, darkMode = false, currentLangExt = null, lastCmd = ''
+let _appReadmePath = null
 // Keep window.termCwd in sync so project-search.js always reads the live directory
 Object.defineProperty(window, 'termCwd', { get: () => termCwd, set: v => { termCwd = v; }, configurable: true, enumerable: true })
 let aiInFlight = false
@@ -1504,9 +1505,10 @@ initCwd()
 updateSideHeaderToCwd()
 
 // Stream terminal output chunks from main process in real time
+// Normalize \r\n → \n and bare \r → \n so git progress lines render correctly
 if (window.kit?.onTermOutput) {
   window.kit.onTermOutput((chunk) => {
-    termOut.textContent += chunk;
+    termOut.textContent += chunk.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     termOut.scrollTop = termOut.scrollHeight;
   });
 }
@@ -3942,6 +3944,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Resolve README path — bundled with the app at its root
     const readmeResult = await window.kit.getReadmePath();
     const readmePath = readmeResult?.path || '';
+    _appReadmePath = readmePath;
 
     // Session restore — if a previous session exists, reopen that file
     let sessionRestored = false;
@@ -4083,7 +4086,7 @@ document.addEventListener('keydown', async (e) => {
 
 // ===== Session Restore =====
 function saveSession() {
-  if (!currentFile) {
+  if (!currentFile || currentFile === _appReadmePath) {
     try { localStorage.removeItem('kitSession'); } catch(_) {}
     return;
   }
