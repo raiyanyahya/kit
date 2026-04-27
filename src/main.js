@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, safeStorage, sh
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { fileURLToPath } from 'url'
 import OpenAI from 'openai'
 import { ImapFlow } from 'imapflow'
@@ -336,7 +336,17 @@ ipcMain.handle('fs:delete', async (_e, p)=>{ try{ const st = await fsP.stat(p); 
 const terminalEnv = { ...process.env };
 
 ipcMain.handle('term:run', async (_e, cwd, command)=>{
-  return new Promise((resolve)=>{ exec(command, { cwd, shell:true, env: terminalEnv, maxBuffer:10*1024*1024 }, (err, stdout, stderr)=>{ const out = (stdout||'') + (stderr||''); resolve({ ok: !err, output: out || (err? String(err):'') }) }) })
+  return new Promise((resolve)=>{
+    const win = BrowserWindow.getAllWindows()[0];
+    const send = (chunk) => { try { win?.webContents.send('term:output', chunk) } catch(_){} };
+    const proc = spawn(command, [], { cwd, shell: true, env: terminalEnv });
+    let stderr = '';
+    const timeout = setTimeout(()=>{ proc.kill(); resolve({ ok: false, output: '! Command timed out\n' }) }, 120_000);
+    proc.stdout.on('data', (d)=> send(d.toString()));
+    proc.stderr.on('data', (d)=>{ const s = d.toString(); stderr += s; send(s); });
+    proc.on('close', (code)=>{ clearTimeout(timeout); resolve({ ok: code === 0, output: '' }); });
+    proc.on('error', (e)=>{ clearTimeout(timeout); resolve({ ok: false, output: '! ' + e.message + '\n' }); });
+  });
 })
 
 const BLOCKED_ENV_KEYS = new Set(['LD_PRELOAD','LD_LIBRARY_PATH','DYLD_INSERT_LIBRARIES','DYLD_LIBRARY_PATH','NODE_OPTIONS','NODE_PATH','ELECTRON_RUN_AS_NODE']);

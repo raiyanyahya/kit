@@ -1503,6 +1503,14 @@ async function initCwd() {
 initCwd()
 updateSideHeaderToCwd()
 
+// Stream terminal output chunks from main process in real time
+if (window.kit?.onTermOutput) {
+  window.kit.onTermOutput((chunk) => {
+    termOut.textContent += chunk;
+    termOut.scrollTop = termOut.scrollHeight;
+  });
+}
+
 async function openFileFromTerminal(pathLike) {
   const p = pathLike.trim(); if (!p) return
   let full = p
@@ -1762,11 +1770,23 @@ Keyboard Shortcuts:
 
 
 
-    // Fallback to shell
-    const res = await window.kit.run(termCwd, cmd);
-    termOut.textContent += ((res.output || '') + '\n');
-    termOut.scrollTop = termOut.scrollHeight;
+    // Fallback to shell — output is streamed live via onTermOutput
+    const prevPlaceholder = termIn.placeholder;
+    termIn.disabled = true;
+    termIn.placeholder = 'running…';
+    try {
+      const res = await window.kit.run(termCwd, cmd);
+      // res.output is only non-empty for spawn errors not yet streamed
+      if (res.output) { termOut.textContent += res.output; termOut.scrollTop = termOut.scrollHeight; }
+      else { termOut.textContent += '\n'; termOut.scrollTop = termOut.scrollHeight; }
+    } finally {
+      termIn.disabled = false;
+      termIn.placeholder = prevPlaceholder;
+      termIn.focus();
+    }
   } catch (err) {
+    termIn.disabled = false;
+    termIn.focus();
     termOut.textContent += ('! ' + (err?.message || String(err)) + '\n');
     termOut.scrollTop = termOut.scrollHeight;
   }

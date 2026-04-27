@@ -5,3 +5,5 @@ src/renderer.bundle.js
 src/renderer.bundle.js.map
 .DS_Store
 *.log
+.claude/
+.vscode/

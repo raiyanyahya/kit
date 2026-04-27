@@ -14,6 +14,7 @@ const api = {
   mkdir: (d)=> ipcRenderer.invoke('fs:mkdir', d),
   delete: (p)=> ipcRenderer.invoke('fs:delete', p),
   run: (cwd, cmd)=> ipcRenderer.invoke('term:run', cwd, cmd),
+  onTermOutput: (cb)=> ipcRenderer.on('term:output', (_e, data)=> cb(data)),
   setEnv: (key, value)=> ipcRenderer.invoke('term:setEnv', key, value),
   getEnv: (key)=> ipcRenderer.invoke('term:getEnv', key),
   exit: ()=> ipcRenderer.invoke('app:exit'),
