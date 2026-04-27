@@ -4360,7 +4360,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Poll git status every 5 seconds, but only when in a git repo
-setInterval(() => { if (_isGitRepo) updateGitInfo(); }, 5000);
+setInterval(() => { if (_isGitRepo) updateGitInfo(); }, 3000);
 
 // ===== Git Panel =====
 function openGitPanel() {
@@ -5732,6 +5732,36 @@ let agentCancelled = false;
 let agentPreviousId = null;
 let agentCwd = null; // folder set via "Open Folder" picker
 
+// Permission state: tracks which tool categories the user has blanket-approved this session
+const agentPermissions = { write_file: false, run_command: false };
+
+// Show an inline permission card and return a promise resolving to 'allow' | 'allowAll' | 'deny'
+function agentAskPermission(toolName, detail) {
+  return new Promise((resolve) => {
+    const log = document.getElementById('agentLog');
+    if (!log) { resolve('deny'); return; }
+
+    const labels = { write_file: 'Write File', run_command: 'Run Command' };
+    const card = document.createElement('div');
+    card.className = 'agent-perm';
+    card.innerHTML = `
+      <div class="agent-perm-title">Permission required — ${labels[toolName] || toolName}</div>
+      <div class="agent-perm-detail">${detail.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+      <div class="agent-perm-btns">
+        <button class="agent-perm-btn allow">Allow once</button>
+        <button class="agent-perm-btn allow-all">Allow all ${labels[toolName] || toolName}s</button>
+        <button class="agent-perm-btn deny">Deny</button>
+      </div>`;
+    log.appendChild(card);
+    log.scrollTop = log.scrollHeight;
+
+    const cleanup = (result) => { card.remove(); resolve(result); };
+    card.querySelector('.allow').addEventListener('click', () => cleanup('allow'));
+    card.querySelector('.allow-all').addEventListener('click', () => { agentPermissions[toolName] = true; cleanup('allowAll'); });
+    card.querySelector('.deny').addEventListener('click', () => cleanup('deny'));
+  });
+}
+
 // ── Project Rules ──────────────────────────────────────────
 // Reads .kitrules or AGENT.md from the given directory.
 // Returns the rules text, or '' if none found.
@@ -5812,6 +5842,16 @@ const AGENT_TOOLS = [
 
 async function agentExecuteTool(name, argsObj) {
   try {
+    // write_file and run_command require explicit user permission
+    if (name === 'write_file' && !agentPermissions.write_file) {
+      const decision = await agentAskPermission('write_file', `${argsObj.path}\n\n${(argsObj.content || '').slice(0, 300)}${(argsObj.content || '').length > 300 ? '…' : ''}`);
+      if (decision === 'deny') return 'Denied by user.';
+    }
+    if (name === 'run_command' && !agentPermissions.run_command) {
+      const decision = await agentAskPermission('run_command', argsObj.command || '');
+      if (decision === 'deny') return 'Denied by user.';
+    }
+
     switch (name) {
       case 'read_file': {
         const res = await window.kit.readFile(argsObj.path);
@@ -5922,6 +5962,8 @@ async function agentRun() {
 
   agentInFlight = true;
   agentCancelled = false;
+  agentPermissions.write_file = false;
+  agentPermissions.run_command = false;
   agentSetRunning(true);
   agentSetStatus('Starting\u2026');
   const kitHome = (await window.kit.homeDir().catch(() => '~')) + '/.Kit';

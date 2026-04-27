@@ -3264,6 +3264,58 @@ body.agent-mode.agent-sidebar-open #toggleSidebar {
 }
 .agent-step.open .agent-step-body { display: block; }
 
+/* Permission prompt card */
+.agent-perm {
+  align-self: stretch;
+  background: var(--toolbar-bg);
+  border: 1px solid var(--toolbar-border);
+  border-left: 3px solid #f59e0b;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-perm-title {
+  font-weight: 600;
+  font-size: 11px;
+  opacity: 0.6;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.agent-perm-detail {
+  font-family: monospace;
+  font-size: 11.5px;
+  opacity: 0.85;
+  word-break: break-all;
+  white-space: pre-wrap;
+  max-height: 80px;
+  overflow: hidden;
+}
+.agent-perm-btns {
+  display: flex;
+  gap: 6px;
+}
+.agent-perm-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--toolbar-border);
+  background: var(--toolbar-bg);
+  color: var(--toolbar-fg);
+  transition: background 0.15s;
+}
+.agent-perm-btn:hover { background: var(--toolbar-border); }
+.agent-perm-btn.allow { border-color: #4ade80; color: #4ade80; }
+.agent-perm-btn.allow:hover { background: rgba(74,222,128,0.12); }
+.agent-perm-btn.allow-all { border-color: #60a5fa; color: #60a5fa; }
+.agent-perm-btn.allow-all:hover { background: rgba(96,165,250,0.12); }
+.agent-perm-btn.deny { border-color: #f87171; color: #f87171; }
+.agent-perm-btn.deny:hover { background: rgba(248,113,113,0.12); }
+
 /* Thinking dots */
 .agent-thinking {
   align-self: flex-start;
