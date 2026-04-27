@@ -1403,13 +1403,16 @@ addFolderBtn?.addEventListener('click', async () => {
 })
 
 // ===== Git status =====
+let _isGitRepo = false;
+
 async function updateGitInfo() {
   if (!termCwd || !gitInfo) return;
   try {
     const branchRes = await window.kit.exec(termCwd, 'git rev-parse --abbrev-ref HEAD 2>/dev/null');
-    if (!branchRes.ok || !branchRes.output.trim()) { gitInfo.textContent = ''; return; }
+    if (!branchRes.ok || !branchRes.output.trim()) { _isGitRepo = false; gitInfo.textContent = ''; return; }
     const branch = branchRes.output.trim().split('\n')[0];
-    if (branch === 'HEAD') { gitInfo.textContent = ''; return; } // detached HEAD — skip
+    if (branch === 'HEAD') { _isGitRepo = false; gitInfo.textContent = ''; return; } // detached HEAD — skip
+    _isGitRepo = true;
 
     const sha = (await window.kit.exec(termCwd, 'git rev-parse --short HEAD 2>/dev/null')).output.trim().split('\n')[0];
 
@@ -4356,8 +4359,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('settingAiWebSearch')?.addEventListener('change', aiCtxChange('webSearch'));
 });
 
-// Poll git status every 15 seconds so the badge always reflects reality
-setInterval(() => updateGitInfo(), 15000);
+// Poll git status every 5 seconds, but only when in a git repo
+setInterval(() => { if (_isGitRepo) updateGitInfo(); }, 5000);
 
 // ===== Git Panel =====
 function openGitPanel() {
