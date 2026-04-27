@@ -37,38 +37,38 @@ ipcMain.handle('getCwd', async () => {
   return process.cwd();
 });
 
-// Jack folder management
-ipcMain.handle('jack:ensureFolder', async () => {
+// Kit folder management
+ipcMain.handle('kit:ensureFolder', async () => {
   const homeDir = os.homedir();
-  const jackDir = path.join(homeDir, '.Jack');
-  const boardsDir = path.join(jackDir, 'boards');
+  const kitDir = path.join(homeDir, '.Kit');
+  const boardsDir = path.join(kitDir, 'boards');
 
   try {
-    await fs.promises.mkdir(jackDir, { recursive: true });
+    await fs.promises.mkdir(kitDir, { recursive: true });
     await fs.promises.mkdir(boardsDir, { recursive: true });
-    return { ok: true, path: jackDir };
+    return { ok: true, path: kitDir };
   } catch (error) {
     return { ok: false, error: error.message };
   }
 });
 
-ipcMain.handle('jack:loadBoard', async () => {
+ipcMain.handle('kit:loadBoard', async () => {
   const homeDir = os.homedir();
   try {
-    const data = await fs.promises.readFile(path.join(homeDir, '.Jack', 'boards', 'main.json'), 'utf8');
+    const data = await fs.promises.readFile(path.join(homeDir, '.Kit', 'boards', 'main.json'), 'utf8');
     return { ok: true, data };
   } catch {
     return { ok: true, data: null };
   }
 });
 
-ipcMain.handle('jack:saveBoard', async (_e, data) => {
+ipcMain.handle('kit:saveBoard', async (_e, data) => {
   const homeDir = os.homedir();
-  await fs.promises.writeFile(path.join(homeDir, '.Jack', 'boards', 'main.json'), data, 'utf8');
+  await fs.promises.writeFile(path.join(homeDir, '.Kit', 'boards', 'main.json'), data, 'utf8');
   return { ok: true };
 });
 
-ipcMain.handle('jack:captureBoard', async (_e, rect) => {
+ipcMain.handle('kit:captureBoard', async (_e, rect) => {
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     title: 'Save Whiteboard',
     defaultPath: 'whiteboard.png',
@@ -80,174 +80,104 @@ ipcMain.handle('jack:captureBoard', async (_e, rect) => {
   return { ok: true, filePath };
 });
 
-ipcMain.handle('jack:createReadme', async () => {
+ipcMain.handle('kit:createReadme', async () => {
   const homeDir = os.homedir();
-  const jackDir = path.join(homeDir, '.Jack');
-  const readmePath = path.join(jackDir, 'README.md');
+  const kitDir = path.join(homeDir, '.Kit');
+  const readmePath = path.join(kitDir, 'README.md');
   
-  const readmeContent = `# 🦋 Jack
-*A Beautiful, Multi-Mode Development Environment*
+  const readmeContent = `# 🦋 Kit
+*Your complete workspace for developers, writers, and curious minds.*
 
 ---
 
-## ✨ Welcome to Your Creative Workspace
+## ✨ Welcome
 
-Jack is more than just a text editor—it's your complete digital workspace designed for developers, writers, and creators. With its elegant interface and powerful features, Jack transforms how you work with code, documents, and ideas.
+Kit brings together a code editor, browser, AI assistant, agentic AI, terminal, git panel, calendar, email client, whiteboard, and workflow automation — all in one quiet, keyboard-first application. No context-switching. No clutter. Just flow.
 
 ---
 
 ## 🚀 Getting Started
 
-### First Steps
-1. **Explore the sidebar** - Your files and folders are here
-2. **Try the modes** - Click the toolbar icons or use keyboard shortcuts
-3. **Create your first document** - Use Writing Mode for a clean experience
-4. **Customize your workspace** - Toggle between light and dark themes
-
-### Pro Tips
-- **Auto-save is always on** - Your work is continuously saved
-- **Use ⌘K for everything** - The fastest way to find and open files
-- **Writing Mode is perfect for documentation** - Clean, focused environment
-- **API Mode remembers your requests** - Build up a collection over time
-- **Ask AI for help** - Use the AI assistant for coding, writing, and problem-solving
+1. **Explore the sidebar** — toggle it with **⌘E** / **Ctrl+E**
+2. **Try the modes** — click the toolbar icons or use the shortcuts below
+3. **Set your AI keys** — click the key icon in the status bar (OpenAI and/or Anthropic)
+4. **Press ⌘K** — the fastest way to find any file or run any command
 
 ---
 
-## 🎯 Core Features
+## 🎯 Modes
 
-### 🖋️ **Writing Mode** - *Pure Focus*
-Transform your editor into a serene writing sanctuary with:
-- **Notion-inspired interface** with beautiful serif typography
-- **Distraction-free environment** for deep focus
-- **Auto-save functionality** - never lose your thoughts
-- **Rich formatting toolbar** with all essential markdown tools
-- **Document library** in the sidebar for easy organization
-- **Professional typography** optimized for long-form writing
-
-### 🌐 **Browser Mode** - *Web at Your Fingertips*
-Browse the web without leaving your editor:
-- **Integrated web browser** with full navigation
-- **Smart URL bar** with search suggestions
-- **Tab management** for multiple pages
-- **Developer-friendly** browsing experience
-
-### ⚡ **API Testing Mode** - *Developer's Swiss Army Knife*
-Test and debug APIs with ease:
-- **Postman-like interface** with clean, modern design
-- **Complete HTTP method support** (GET, POST, PUT, DELETE, etc.)
-- **Request collections** and history management
-- **Beautiful response formatting** with syntax highlighting
-- **Authentication support** for secure endpoints
-
-### 🔍 **Project Search** - *Find Anything, Instantly*
-Lightning-fast search across your entire workspace:
-- **Global search** with ⌘K/Ctrl+K shortcut
-- **Intelligent file filtering** (ignores node_modules, etc.)
-- **Instant results** with live preview
-- **Quick file navigation** - click to open at exact location
-
-### 🤖 **AI Assistant** - *Your Intelligent Coding Companion*
-Powerful AI capabilities integrated throughout your workflow:
-- **Code generation and completion** - Write code faster with AI suggestions
-- **Bug fixing and debugging** - Get help identifying and solving issues
-- **Code explanation** - Understand complex code with AI explanations
-- **Documentation writing** - Generate comprehensive docs automatically
-- **Refactoring assistance** - Improve code quality with AI recommendations
-- **Multi-language support** - AI works with all programming languages
-- **Writing assistance** - Grammar, style, and content suggestions
-- **Problem solving** - Get help with algorithms and logic
-- **Code review** - AI-powered code analysis and suggestions
+| Mode | Shortcut | What it's for |
+|------|----------|---------------|
+| **Editor** | **Ctrl+0** | Code, config, markdown — the main workspace |
+| **Browser** | **Ctrl+B** | Integrated Chromium browser with AI page analysis |
+| **Whiteboard** | **Ctrl+W** | Freehand drawing and visual thinking |
+| **Kit Agent** | **Ctrl+Shift+A** | Autonomous AI agent with file & shell access |
+| **Stairs** | **Ctrl+Shift+R** | Visual step-by-step workflow automation |
+| **Email** | **Ctrl+M** | Built-in IMAP/SMTP email client |
+| **Calendar** | toolbar | Event management, saved to \`~/.Kit/calendar.json\` |
 
 ---
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action | Description |
-|----------|--------|-------------|
-| **⌘K** / **Ctrl+K** | Project Search | Find anything in your workspace |
-| **⌘D** / **Ctrl+D** | Toggle Theme | Switch between light and dark modes |
-| **⌘W** / **Ctrl+W** | Writing Mode | Enter distraction-free writing |
-| **⌘B** / **Ctrl+B** | Browser Mode | Open integrated web browser |
-| **⌘A** / **Ctrl+A** | API Mode | Test and debug APIs |
-| **⌘E** / **Ctrl+E** | Toggle Sidebar | Show/hide file explorer |
-| **⌘0** / **Ctrl+0** | Home | Return to main editor |
+| Shortcut | Action |
+|----------|--------|
+| **⌘K** / **Ctrl+K** | Project search — find any file instantly |
+| **⌘D** / **Ctrl+D** | Toggle light / dark theme |
+| **⌘B** / **Ctrl+B** | Browser mode |
+| **⌘W** / **Ctrl+W** | Whiteboard |
+| **⌘M** / **Ctrl+M** | Email |
+| **⌘E** / **Ctrl+E** | Toggle sidebar |
+| **⌘0** / **Ctrl+0** | Return to editor |
+| **⌘⇧A** / **Ctrl+Shift+A** | Kit Agent |
+| **⌘⇧R** / **Ctrl+Shift+R** | Stairs |
+| **⌘⇧P** / **Ctrl+Shift+P** | Command palette |
 
 ---
 
-## 📁 Workspace Organization
+## 🤖 AI Features
 
-Your Jack workspace is thoughtfully organized:
+Kit connects to **OpenAI** and **Anthropic** simultaneously. Set your keys from the status bar — they are stored encrypted via Electron's \`safeStorage\`.
+
+**Inline AI (status bar):**
+- Check for errors, summarise, generate tests — one click on the current file
+- Prefix your terminal input with \`ai\` to ask anything in context
+
+**Kit Agent:**
+- Give it a task in plain English — it breaks work into steps, reads and writes files, runs shell commands, and reports results
+- Supports both OpenAI (gpt-5.4, o3, o4-mini) and Anthropic (Claude Sonnet / Opus) models
+- Add a \`.kitrules\` or \`AGENT.md\` file to any project folder to give the agent project-specific instructions
+
+**Stairs (workflow automation):**
+- Chain AI prompts, shell commands, HTTP requests, and file operations into reusable pipelines
+- Build workflows visually, run with one click
+
+---
+
+## 📁 Workspace
 
 \`\`\`
-📂 .Jack/
-├── 📄 README.md          # This beautiful guide
-├── 📂 writing/           # Your writing documents
-│   ├── 📝 notes.md
-│   ├── 📝 journal.md
-│   └── 📝 ideas.md
-└── 📂 projects/          # Your development projects
+📂 ~/.Kit/
+├── 📄 README.md        ← this file
+├── 📂 projects/        ← agent-created projects
+├── 📂 notes/           ← text notes and documents
+├── 📂 data/            ← data files and datasets
+├── 📂 scratch/         ← quick experiments
+├── 📂 boards/          ← whiteboard saves
+├── 📂 stairs/          ← saved workflows
+└── 📄 calendar.json    ← calendar events
 \`\`\`
 
 ---
 
-## 🎨 Themes & Customization
+## 🎨 Themes
 
-Jack adapts to your preferences:
-- **Light Mode**: Clean, bright interface perfect for daytime work
-- **Dark Mode**: Easy on the eyes for late-night coding sessions
-- **Consistent theming** across all modes for a cohesive experience
+**⌘D / Ctrl+D** toggles light and dark. Kit respects your system preference on first launch.
 
 ---
 
-## 💡 Use Cases
-
-### For Developers
-- **API development and testing** with the integrated API client
-- **AI-powered coding assistance** for faster development
-- **Documentation writing** in the beautiful Writing Mode
-- **Research and reference** with the built-in browser
-- **Intelligent code completion** and bug fixing
-
-### For Writers
-- **Distraction-free writing** with Notion-like interface
-- **AI writing assistance** for grammar and style
-- **Document organization** with the file sidebar
-- **Research integration** with browser mode
-- **Markdown preview** for formatted documents
-
-### For Creators
-- **Multi-modal workflow** switching between text, visual, and web
-- **AI-powered creative assistance** for brainstorming and ideation
-- **Integrated workspace** - everything in one place
-- **Beautiful, inspiring interface** that enhances creativity
-
----
-
-## 🌟 What Makes Jack Special
-
-- **Unified Experience**: All tools work together seamlessly
-- **Beautiful Design**: Every pixel crafted for productivity and joy
-- **Keyboard-First**: Optimized for speed and efficiency
-- **Auto-Everything**: Saving, theming, and organization handled automatically
-- **Developer-Friendly**: Built by developers, for developers
-- **Writer-Focused**: Equal attention to coding and writing experiences
-
----
-
-## 🎯 Next Steps
-
-Ready to dive in? Here's what to try:
-
-1. **Press ⌘W** to enter Writing Mode and create your first document
-2. **Press ⌘K** to search for files and see the magic
-3. **Press ⌘A** to test an API endpoint
-4. **Press ⌘B** to browse documentation or inspiration
-
----
-
-*Welcome to Jack - where productivity meets beauty, and every keystroke matters.* ✨
-
-**Happy creating!** 🚀
+*Welcome to Kit — where every tool you need is one keystroke away.* ✨
 `;
 
   try {
@@ -266,20 +196,20 @@ Ready to dive in? Here's what to try:
   }
 });
 
-ipcMain.handle('jack:getDefaultDir', async () => {
+ipcMain.handle('kit:getDefaultDir', async () => {
   const homeDir = os.homedir();
-  const jackDir = path.join(homeDir, '.Jack');
-  return { ok: true, path: jackDir };
+  const kitDir = path.join(homeDir, '.Kit');
+  return { ok: true, path: kitDir };
 });
 
-try { app.setName('Jack') } catch(_) {}
-process.title = 'Jack'
+try { app.setName('Kit') } catch(_) {}
+process.title = 'Kit'
 let win
 
 function createMenu(){
   const isMac = process.platform === 'darwin'
   const template = [
-    ...(isMac ? [{ label: 'Jack', submenu: [{ role: 'about', label: 'About Jack' }, { type: 'separator' }, { role: 'quit', label: 'Quit Jack' }]}] : []),
+    ...(isMac ? [{ label: 'Kit', submenu: [{ role: 'about', label: 'About Kit' }, { type: 'separator' }, { role: 'quit', label: 'Quit Kit' }]}] : []),
     { label: 'Edit', submenu: [
       { role: 'undo' }, { role: 'redo' }, { type:'separator' },
       { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }
@@ -291,7 +221,6 @@ function createMenu(){
     { label:'View', submenu: [
       { role:'reload' }, { role:'toggleDevTools' }, { type:'separator' }, { role:'togglefullscreen' },
       { type:'separator' },
-      { label:'API Testing', accelerator:'CmdOrCtrl+A', click: ()=> win?.webContents.send('menu:api') }
     ]}
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
@@ -315,7 +244,7 @@ function createWindow(){
   win = new BrowserWindow({
     width: 1100, height: 900, minWidth: 1100, minHeight: 700,
     frame: false, transparent: false, backgroundColor: '#ffffff',
-    title: 'Jack',
+    title: 'Kit',
     webPreferences: {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.cjs'),
@@ -327,7 +256,7 @@ function createWindow(){
   win.loadFile(path.join(__dirname, 'index.html'))
 }
 app.whenReady().then(async () => {
-  KEY_FILE = path.join(app.getPath('userData'), '.jackkey');
+  KEY_FILE = path.join(app.getPath('userData'), '.kitkey');
   try {
     if (safeStorage.isEncryptionAvailable()) {
       const raw = await fs.promises.readFile(KEY_FILE);
@@ -481,7 +410,7 @@ ipcMain.handle('ai:clearKey', async (_e, provider) => {
 
 // Main AI request handler
 async function handleAIRequest(payload, apiKey) {
-    const model = payload?.model || 'gpt-4.1';
+    const model = payload?.model || 'gpt-5.4';
     const system = payload?.system || '';
   let input = String(payload?.input || '');
   
@@ -648,7 +577,7 @@ async function handleClaudeAgentRequest(payload, apiKey) {
 // ── Unified request handlers ──────────────────────────────
 
 ipcMain.handle('ai:request', async (_e, payload) => {
-  const model = payload?.model || 'gpt-4.1';
+  const model = payload?.model || 'gpt-5.4';
   if (/^claude-/.test(model)) {
     return handleClaudeRequest(payload, ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY);
   }
@@ -658,7 +587,7 @@ ipcMain.handle('ai:request', async (_e, payload) => {
 });
 
 ipcMain.handle('agent:request', async (_e, payload) => {
-  const model = payload?.model || 'gpt-4.1';
+  const model = payload?.model || 'gpt-5.4';
   if (/^claude-/.test(model)) {
     return handleClaudeAgentRequest(payload, ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY);
   }
@@ -1154,7 +1083,7 @@ ipcMain.handle('email:moveToTrash', async (_e, uid) => {
   }
 });
 // ── STAIRS ──────────────────────────────────────────────────────────────────
-const stairsDir = () => path.join(os.homedir(), '.Jack', 'stairs');
+const stairsDir = () => path.join(os.homedir(), '.Kit', 'stairs');
 
 ipcMain.handle('stairs:list', async () => {
   try {

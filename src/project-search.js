@@ -91,12 +91,11 @@ class ProjectSearch {
         return;
       }
       
-      // Writer Mode (Cmd+W / Ctrl+W)
+      // Whiteboard Mode (Cmd+W / Ctrl+W)
       if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
         e.preventDefault();
-        const writingBtn = document.getElementById('writingModeBtn');
-        if (writingBtn) {
-          writingBtn.click();
+        if (window.setWhiteboardMode) {
+          window.setWhiteboardMode(!document.body.classList.contains('whiteboard-mode'));
         }
         return;
       }
@@ -110,16 +109,6 @@ class ProjectSearch {
         }
         return;
       }
-      
-    // API Mode (Cmd+R / Ctrl+R)
-    if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
-      e.preventDefault();
-      if (window.setApiMode) {
-        const isApi = document.body.classList.contains('api-mode');
-        window.setApiMode(!isApi);
-      }
-      return;
-    }
       
       // Sidebar Toggle (Cmd+E / Ctrl+E)
       if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
@@ -139,16 +128,6 @@ class ProjectSearch {
           window.setBrowserMode(false);
         }
 
-        if (document.body.classList.contains('api-mode') && window.setApiMode) {
-          window.setApiMode(false);
-        }
-        if (document.body.classList.contains('writing-mode')) {
-          const writingOverlay = document.getElementById('writingOverlay');
-          if (writingOverlay) {
-            writingOverlay.classList.add('hidden');
-            document.body.classList.remove('writing-mode');
-          }
-        }
         return;
       }
     });
@@ -183,7 +162,7 @@ class ProjectSearch {
       return window.termCwd;
     }
 
-    const bridge = window.jack || window.jackBridge;
+    const bridge = window.kit || window.kitBridge;
     if (bridge && bridge.getCwd) {
       try {
         return await bridge.getCwd();
@@ -195,7 +174,7 @@ class ProjectSearch {
 
   async indexDirectory(dirPath) {
     try {
-      const bridge = window.jack || window.jackBridge;
+      const bridge = window.kit || window.kitBridge;
       if (!bridge || !bridge.list) return;
       let result = await bridge.list(dirPath);
       
@@ -230,7 +209,7 @@ class ProjectSearch {
 
   async indexFile(filePath) {
     try {
-      const bridge = window.jack || window.jackBridge;
+      const bridge = window.kit || window.kitBridge;
       if (!bridge || !bridge.readFile) return;
       let result = await bridge.readFile(filePath);
       

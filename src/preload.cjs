@@ -34,12 +34,13 @@ const api = {
   readDirectory: (dirPath)=> ipcRenderer.invoke('readDirectory', dirPath),
   getCwd: ()=> ipcRenderer.invoke('getCwd'),
   // --- Folder / Board Management ---
-  ensureFolder: ()=> ipcRenderer.invoke('jack:ensureFolder'),
-  loadBoard: ()=> ipcRenderer.invoke('jack:loadBoard'),
-  saveBoard: (data)=> ipcRenderer.invoke('jack:saveBoard', data),
-  captureBoard: (rect)=> ipcRenderer.invoke('jack:captureBoard', rect),
-  createReadme: ()=> ipcRenderer.invoke('jack:createReadme'),
-  getDefaultDir: ()=> ipcRenderer.invoke('jack:getDefaultDir'),  onMenuApi: (callback) => ipcRenderer.on('menu:api', callback),  stairs: {
+  ensureFolder: ()=> ipcRenderer.invoke('kit:ensureFolder'),
+  loadBoard: ()=> ipcRenderer.invoke('kit:loadBoard'),
+  saveBoard: (data)=> ipcRenderer.invoke('kit:saveBoard', data),
+  captureBoard: (rect)=> ipcRenderer.invoke('kit:captureBoard', rect),
+  createReadme: ()=> ipcRenderer.invoke('kit:createReadme'),
+  getDefaultDir: ()=> ipcRenderer.invoke('kit:getDefaultDir'),
+  stairs: {
     list:      ()         => ipcRenderer.invoke('stairs:list'),
     save:      (s)        => ipcRenderer.invoke('stairs:save', s),
     delete:    (id)       => ipcRenderer.invoke('stairs:delete', id),
@@ -63,9 +64,9 @@ const api = {
 };
 
 try {
-  contextBridge.exposeInMainWorld('jack', api);
+  contextBridge.exposeInMainWorld('kit', api);
 } catch (err) {
   try {
-    contextBridge.exposeInMainWorld('jackBridge', api);
+    contextBridge.exposeInMainWorld('kitBridge', api);
   } catch(_){}
 }

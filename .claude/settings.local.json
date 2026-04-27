@@ -61,7 +61,10 @@
       "Bash(sed -n '1210,1220p' /home/dev/Downloads/kit/inspect_namespacefix/src/styles.css)",
       "Bash(sed -n '2783,2789p' /home/dev/Downloads/kit/inspect_namespacefix/src/styles.css)",
       "Bash(sed -n '178,192p' /home/dev/Downloads/kit/inspect_namespacefix/src/styles.css)",
-      "Bash(sed -n '1347,1360p' /home/dev/Downloads/kit/inspect_namespacefix/src/styles.css)"
+      "Bash(sed -n '1347,1360p' /home/dev/Downloads/kit/inspect_namespacefix/src/styles.css)",
+      "WebFetch(domain:openai.com)",
+      "WebFetch(domain:help.openai.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

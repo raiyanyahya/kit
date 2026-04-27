@@ -1,6 +1,6 @@
 
-// Jack alias without mutating window.jack
-const JACK = (window.jack || window.jackBridge);
+// Kit alias without mutating window.kit
+const KIT = (window.kit || window.kitBridge);
 import { EditorView, highlightActiveLine, lineNumbers, keymap } from '@codemirror/view'
 import { EditorState, EditorSelection } from '@codemirror/state'
 import { syntaxHighlighting, defaultHighlightStyle, StreamLanguage, indentUnit } from '@codemirror/language'
@@ -71,16 +71,18 @@ const _BRAND = {
 // ── Model groups ──────────────────────────────────────────────────────────────
 const _MODEL_GROUPS = [
   { provider: 'openai', label: 'OpenAI', models: [
+    { v: 'gpt-5.4',              l: 'gpt-5.4' },
+    { v: 'gpt-5.4-mini',         l: 'gpt-5.4-mini' },
+    { v: 'gpt-5.4-nano',         l: 'gpt-5.4-nano' },
     { v: 'gpt-4.1',              l: 'gpt-4.1' },
     { v: 'gpt-4.1-mini',         l: 'gpt-4.1-mini' },
-    { v: 'gpt-4o',               l: 'gpt-4o' },
     { v: 'o3',                   l: 'o3' },
     { v: 'o4-mini',              l: 'o4-mini' },
   ]},
   { provider: 'anthropic', label: 'Claude', models: [
-    { v: 'claude-opus-4-7',            l: 'claude-opus-4' },
-    { v: 'claude-sonnet-4-6',          l: 'claude-sonnet-4' },
-    { v: 'claude-haiku-4-5-20251001',  l: 'claude-haiku-4.5' },
+    { v: 'claude-opus-4-7',           l: 'Claude Opus 4.7' },
+    { v: 'claude-sonnet-4-6',         l: 'Claude Sonnet 4.6' },
+    { v: 'claude-haiku-4-5-20251001', l: 'Claude Haiku 4.5' },
   ]},
 ];
 
@@ -89,7 +91,7 @@ function _providerFor(model) { return /^claude-/.test(model) ? 'anthropic' : 'op
 // ── Custom model picker ───────────────────────────────────────────────────────
 function _buildModelPicker(selectEl) {
   if (!selectEl) return;
-  const init = selectEl.value || 'gpt-4.1';
+  const init = selectEl.value || 'gpt-5.4';
   selectEl.style.cssText = 'display:none!important';
   const compact = selectEl.classList.contains('agent-model-select');
   const wrap = document.createElement('div');
@@ -157,7 +159,7 @@ const termSpinner = document.getElementById('termSpinner');
 
 function selectedModel() {
   const el = document.getElementById('aiModelSelect');
-  const model = (el && el.value) ? el.value : 'gpt-4.1';
+  const model = (el && el.value) ? el.value : 'gpt-5.4';
   return model;
 }
 function showSpinner() { if (termSpinner) { termSpinner.classList.remove('hidden'); } }
@@ -211,11 +213,11 @@ let editorSettings = { fontSize: 14, tabSize: 2, lineWrap: false, autoSave: 0, a
 
 // ===== Recent Commands (command palette) =====
 let recentCommands = [];
-try { recentCommands = JSON.parse(localStorage.getItem('jackRecentCmds') || '[]'); } catch(_) {}
+try { recentCommands = JSON.parse(localStorage.getItem('kitRecentCmds') || '[]'); } catch(_) {}
 
 function addRecentCommand(id) {
   recentCommands = [id, ...recentCommands.filter(x => x !== id)].slice(0, 5);
-  try { localStorage.setItem('jackRecentCmds', JSON.stringify(recentCommands)); } catch(_) {}
+  try { localStorage.setItem('kitRecentCmds', JSON.stringify(recentCommands)); } catch(_) {}
 }
 
 function fuzzyMatch(query, str) {
@@ -398,7 +400,7 @@ async function closeEditorTab(index) {
     updateStatus();
     renderTabs();
     dirtyDot.classList.remove('on');
-    try { localStorage.removeItem('jackSession'); } catch(_) {}
+    try { localStorage.removeItem('kitSession'); } catch(_) {}
   } else {
     // Switch to adjacent tab
     if (index === activeTabIndex) {
@@ -431,7 +433,7 @@ function markCurrentTabClean() {
   }
 }
 
-function setTitle(n) { document.title = 'Jack — ' + (n || 'untitled.txt') + (dirty ? ' •' : '') }
+function setTitle(n) { document.title = 'Kit — ' + (n || 'untitled.txt') + (dirty ? ' •' : '') }
 function updateStatus() {
   const name = currentFile ? currentFile.split(/[\\/]/).pop() : 'untitled.txt'
   const dir = currentFile ? currentFile.slice(0, currentFile.length - name.length - 1) : (termCwd || '')
@@ -561,16 +563,16 @@ function applyTheme(mode) {
   darkMode = (mode === 'dark');
   document.body.classList.toggle('dark', darkMode);
   document.body.classList.toggle('light', !darkMode);
-  window.jack?.setTheme(darkMode ? 'dark' : 'light');
+  window.kit?.setTheme(darkMode ? 'dark' : 'light');
   rebuildEditor();
-  localStorage.setItem('jack.theme', darkMode ? 'dark' : 'light');
+  localStorage.setItem('kit.theme', darkMode ? 'dark' : 'light');
 }
-; (function initTheme() { const saved = localStorage.getItem('jack.theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; applyTheme(saved || (prefersDark ? 'dark' : 'light')) })()
+; (function initTheme() { const saved = localStorage.getItem('kit.theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; applyTheme(saved || (prefersDark ? 'dark' : 'light')) })()
 
 async function saveFlow() {
   const getDoc = () => editor.state.doc.toString()
   if (currentFile) {
-    const r = await window.jack.writeFile(currentFile, getDoc());
+    const r = await window.kit.writeFile(currentFile, getDoc());
     if (!r.ok) {
       alert('Save failed: ' + r.error);
       return;
@@ -581,10 +583,10 @@ async function saveFlow() {
     updateStatus();
     updateGitInfo();
   } else {
-    const fp = await window.jack.saveAs('untitled.txt');
+    const fp = await window.kit.saveAs('untitled.txt');
     if (!fp) return;
     currentFile = fp;
-    const r = await window.jack.writeFile(fp, getDoc());
+    const r = await window.kit.writeFile(fp, getDoc());
     if (!r.ok) {
       alert('Save failed: ' + r.error);
       return;
@@ -741,7 +743,7 @@ async function _updateKeyDots() {
   const openaiDot = document.getElementById('openaiKeyDot');
   const anthropicDot = document.getElementById('anthropicKeyDot');
   try {
-    const [hasOAI, hasAnt] = await Promise.all([window.jack.hasKey('openai'), window.jack.hasKey('anthropic')]);
+    const [hasOAI, hasAnt] = await Promise.all([window.kit.hasKey('openai'), window.kit.hasKey('anthropic')]);
     if (openaiDot) openaiDot.style.display = hasOAI ? '' : 'none';
     if (anthropicDot) anthropicDot.style.display = hasAnt ? '' : 'none';
   } catch (_) {}
@@ -750,7 +752,7 @@ async function _updateKeyDots() {
 // Check if AI key is already set on startup
 async function checkAIKeyStatus() {
   try {
-    const [hasOAI, hasAnt] = await Promise.all([window.jack.hasKey('openai'), window.jack.hasKey('anthropic')]);
+    const [hasOAI, hasAnt] = await Promise.all([window.kit.hasKey('openai'), window.kit.hasKey('anthropic')]);
     if (hasOAI || hasAnt) {
       aiToggle?.classList.add('ai-on');
     } else {
@@ -777,7 +779,7 @@ document.querySelectorAll('.api-tab').forEach(tab => {
 aiKeyCancel?.addEventListener('click', () => { closeAiKeyModal() })
 
 document.getElementById('aiKeyRemove')?.addEventListener('click', async () => {
-  await window.jack.clearKey(activeKeyProvider);
+  await window.kit.clearKey(activeKeyProvider);
   aiKeyInput.value = '';
   await checkAIKeyStatus();
   await _updateKeyDots();
@@ -786,7 +788,7 @@ document.getElementById('aiKeyRemove')?.addEventListener('click', async () => {
 aiKeySave?.addEventListener('click', async () => {
   const k = (aiKeyInput.value || '').trim();
   if (!k) return;
-  const ok = await JACK.setApiKey(k, activeKeyProvider);
+  const ok = await KIT.setApiKey(k, activeKeyProvider);
   if (ok) {
     await checkAIKeyStatus();
     await _updateKeyDots();
@@ -819,7 +821,7 @@ async function aiTask(prompt) {
   const system = rules ? `PROJECT RULES (follow strictly):\n${rules}` : undefined;
   try {
     showSpinner();
-    const resp = await window.jack.aiRequest({ model, input, system })
+    const resp = await window.kit.aiRequest({ model, input, system })
     let aiOut = resp.ok ? (resp.text || '') : '! AI error: ' + (resp.error || 'unknown');
     if (resp.ok && resp.citations?.length) {
       aiOut += '\n\nSources:\n' + resp.citations.map(c => `  ${c.title}\n  ${c.url}`).join('\n');
@@ -843,7 +845,7 @@ async function aiTaskWindow(prompt, title = 'AI Result') {
   const system = rules ? `PROJECT RULES (follow strictly):\n${rules}` : undefined;
   try {
     showSpinner();
-    const resp = await window.jack.aiRequest({ model, input, system })
+    const resp = await window.kit.aiRequest({ model, input, system })
     if (resp.ok) {
       // Detect language from current file
       const ext = extOf(name);
@@ -858,7 +860,7 @@ async function aiTaskWindow(prompt, title = 'AI Result') {
       else if (['php'].includes(ext)) language = 'php';
       // Format the response as HTML
       const htmlContent = `<pre style="white-space:pre-wrap;word-wrap:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;margin:0;">${escapeHtml(resp.text)}</pre>`;
-      window.jack.openResultWindow({ html: htmlContent, title: title, language: language });
+      window.kit.openResultWindow({ html: htmlContent, title: title, language: language });
     } else {
       termOut.textContent += '! AI error: ' + (resp.error || 'unknown') + "\n";
       termOut.scrollTop = termOut.scrollHeight;
@@ -910,28 +912,28 @@ function renderTree(nodes, depth = 0, basePath = '') {
     const full = (basePath.endsWith('/') ? basePath : basePath + '/') + n.name
     el.title = full
     if (n.dir) {
-      const isStarred = localStorage.getItem('jackStarredFolder') === full
+      const isStarred = localStorage.getItem('kitStarredFolder') === full
       const starBtn = document.createElement('button')
       starBtn.className = 'tree-star-btn' + (isStarred ? ' starred' : '')
       starBtn.innerHTML = isStarred ? ICON.starFilled : ICON.starOutline
       starBtn.title = isStarred ? 'Unstar folder' : 'Star as default folder'
       starBtn.addEventListener('click', (e) => {
         e.stopPropagation()
-        const current = localStorage.getItem('jackStarredFolder')
+        const current = localStorage.getItem('kitStarredFolder')
         if (current === full) {
-          localStorage.removeItem('jackStarredFolder')
+          localStorage.removeItem('kitStarredFolder')
         } else {
-          localStorage.setItem('jackStarredFolder', full)
+          localStorage.setItem('kitStarredFolder', full)
         }
         updateStarredFolderBtn()
         refreshSidebar()
       })
       el.appendChild(starBtn)
       let expanded = false, block = null
-      el.addEventListener('click', async () => { if (!expanded) { const listed = await window.jack.list(full); if (listed.ok) { block = document.createElement('div'); block.appendChild(renderTree(listed.items, depth + 1, full)); el.after(block); expanded = true } } else { block?.remove(); block = null; expanded = false } })
+      el.addEventListener('click', async () => { if (!expanded) { const listed = await window.kit.list(full); if (listed.ok) { block = document.createElement('div'); block.appendChild(renderTree(listed.items, depth + 1, full)); el.after(block); expanded = true } } else { block?.remove(); block = null; expanded = false } })
     } else {
       el.addEventListener('click', async () => {
-        const res = await window.jack.readFile(full);
+        const res = await window.kit.readFile(full);
         if (res.ok) {
           openFileInTab(full, res.data);
         } else {
@@ -947,7 +949,7 @@ function renderTree(nodes, depth = 0, basePath = '') {
 function updateStarredFolderBtn() {
   const btn = document.getElementById('starredFolderBtn')
   if (!btn) return
-  const sf = localStorage.getItem('jackStarredFolder')
+  const sf = localStorage.getItem('kitStarredFolder')
   btn.classList.toggle('active', !!sf)
   btn.style.opacity = sf ? '1' : '0.4'
   btn.title = sf ? `Go to starred: ${sf.split('/').pop()}` : 'No starred folder yet — hover a folder and click the star'
@@ -1368,7 +1370,7 @@ document.getElementById('sidebarUpBtn')?.addEventListener('click', () => {
 
 // Starred folder button
 document.getElementById('starredFolderBtn')?.addEventListener('click', () => {
-  const sf = localStorage.getItem('jackStarredFolder')
+  const sf = localStorage.getItem('kitStarredFolder')
   if (!sf) return
   termCwd = sf
   updateSideHeaderToCwd()
@@ -1384,7 +1386,7 @@ addFileBtn?.addEventListener('click', async () => {
   const name = await inputDialog({ title: 'New file', placeholder: 'name.ext' })
   if (!name) return
   const p = (termCwd.endsWith('/') ? termCwd : termCwd + '/') + name
-  const r = await window.jack.writeFile(p, '')
+  const r = await window.kit.writeFile(p, '')
   if (!r.ok) alert('Failed: ' + r.error)
   else refreshSidebar()
 })
@@ -1394,7 +1396,7 @@ addFolderBtn?.addEventListener('click', async () => {
   const name = await inputDialog({ title: 'New folder', placeholder: 'folder-name' })
   if (!name) return
   const p = (termCwd.endsWith('/') ? termCwd : termCwd + '/') + name
-  const r = await window.jack.mkdir(p)
+  const r = await window.kit.mkdir(p)
   if (!r.ok) alert('Failed: ' + r.error)
   else refreshSidebar()
 })
@@ -1403,11 +1405,11 @@ addFolderBtn?.addEventListener('click', async () => {
 async function updateGitInfo() {
   if (!termCwd || !gitInfo) { return }
   try {
-    const check = await window.jack.run(termCwd, 'git rev-parse --is-inside-work-tree')
+    const check = await window.kit.run(termCwd, 'git rev-parse --is-inside-work-tree')
     if (!check.output || !/true/.test(check.output)) { gitInfo.textContent = ''; return }
-    const branch = (await window.jack.run(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0]
-    const sha = (await window.jack.run(termCwd, 'git rev-parse --short HEAD')).output.trim().split('\n')[0]
-    const status = (await window.jack.run(termCwd, 'git status --porcelain=v1 -b')).output
+    const branch = (await window.kit.run(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0]
+    const sha = (await window.kit.run(termCwd, 'git rev-parse --short HEAD')).output.trim().split('\n')[0]
+    const status = (await window.kit.run(termCwd, 'git status --porcelain=v1 -b')).output
     let ahead = 0, behind = 0, modified = 0, untracked = 0
     const lines = status.split('\n').filter(Boolean)
     if (lines.length) {
@@ -1484,7 +1486,7 @@ function normPath(p) { const parts = []; for (const seg of p.split('/')) { if (!
 
 async function initCwd() {
   try {
-    const home = await window.jack.homeDir();
+    const home = await window.kit.homeDir();
     termCwd = home || '/';
     const outEl = document.getElementById('termOut');
     if (outEl) {
@@ -1504,13 +1506,13 @@ updateSideHeaderToCwd()
 async function openFileFromTerminal(pathLike) {
   const p = pathLike.trim(); if (!p) return
   let full = p
-  if (p.startsWith('~')) { const home = await window.jack.homeDir(); full = home + '/' + p.slice(1) }
+  if (p.startsWith('~')) { const home = await window.kit.homeDir(); full = home + '/' + p.slice(1) }
   else if (!p.startsWith('/')) { const base = termCwd.endsWith('/') ? termCwd.slice(0, -1) : termCwd; full = base + '/' + p }
   full = normPath(full)
-  const st = await window.jack.stat(full)
+  const st = await window.kit.stat(full)
   if (!st.ok) { termOut.textContent += "! Not found: " + full + "\n"; return }
   if (st.isDir) { termOut.textContent += "! " + full + " is a directory.\n"; return }
-  const res = await window.jack.readFile(full)
+  const res = await window.kit.readFile(full)
   if (!res.ok) { termOut.textContent += "! Read failed: " + res.error + "\n"; return }
   currentFile = full; currentLangExt = pickLanguage(full.split('/').pop()); rebuildEditor(res.data)
   dirty = false; dirtyDot.classList.remove('on'); updateStatus();
@@ -1529,7 +1531,7 @@ async function completePath(input) {
   const stripTrailingSlash = s => (typeof s === 'string' && s.endsWith('/')) ? s.slice(0, -1) : s
   let baseAbs = ''
   if (baseDirPart.startsWith('~') || pathPart.startsWith('~')) {
-    const home = await window.jack.homeDir()
+    const home = await window.kit.homeDir()
     let rest = baseDirPart || ''
     if (rest.startsWith('~/')) rest = rest.slice(2)
     else if (rest.startsWith('~')) rest = rest.slice(1)
@@ -1539,9 +1541,9 @@ async function completePath(input) {
   } else {
     baseAbs = stripTrailingSlash(termCwd) + '/' + baseDirPart
   }
-  const st = await window.jack.stat(baseAbs || termCwd)
+  const st = await window.kit.stat(baseAbs || termCwd)
   if (!st.ok || !st.isDir) return { newInput: raw, printed: '' }
-  const listed = await window.jack.list(baseAbs || termCwd)
+  const listed = await window.kit.list(baseAbs || termCwd)
   if (!listed.ok) return { newInput: raw, printed: '' }
   const names = listed.items.map(x => x.name).filter(n => n && n.startsWith(prefix))
   if (!names.length) return { newInput: raw, printed: '' }
@@ -1592,7 +1594,7 @@ termIn?.addEventListener('keydown', async (e) => {
   try {
     // Built-ins
     if (head === 'help') {
-      termOut.textContent += `Jack Terminal Commands:
+      termOut.textContent += `Kit Terminal Commands:
 
 Basic:
   help                    Show this help
@@ -1631,14 +1633,16 @@ Code Generation:
   /ai review --file       Code review and suggestions
 
 Available Models:
-  gpt-4.1                Latest general (default)
-  gpt-4.1-mini           Fast & cost-effective
-  gpt-4o                 Omni
-  gpt-4o-mini            Omni Fast
-  o1                     Reasoning
+  gpt-5.4                Latest flagship (default)
+  gpt-5.4-mini           Fast & cost-effective
+  gpt-5.4-nano           Fastest / cheapest
+  gpt-4.1                Previous generation
+  gpt-4.1-mini           Previous gen mini
   o3                     Advanced reasoning
-  o3-mini                Fast reasoning
-  o4-mini                Fastest reasoning
+  o4-mini                Fast reasoning
+  claude-opus-4-7        Claude Opus 4.7
+  claude-sonnet-4-6      Claude Sonnet 4.6
+  claude-haiku-4-5-20251001 Claude Haiku 4.5
 
 Examples:
   AI with Tools (Full capabilities):
@@ -1649,20 +1653,24 @@ Examples:
     /ai code a React component for user login
     /ai complete --file
     /ai explain --file
-    /ai fix "undefined variable" --file --model gpt-4o
+    /ai fix "undefined variable" --file --model o3
 Keyboard Shortcuts:
   ⌘K (Ctrl+K)           Project search
   ⌘D (Ctrl+D)           Toggle dark/light mode
-  ⌘W (Ctrl+W)           Writing mode
+  ⌘W (Ctrl+W)           Whiteboard
   ⌘B (Ctrl+B)           Browser mode
+  ⌘M (Ctrl+M)           Email
   ⌘E (Ctrl+E)           Toggle sidebar
   ⌘0 (Ctrl+0)           Return to main editor
+  ⌘⇧A (Ctrl+Shift+A)   Kit Agent
+  ⌘⇧R (Ctrl+Shift+R)   Stairs
+  ⌘⇧P (Ctrl+Shift+P)   Command palette
 
 `;
       return;
     }
     if (head === 'clear') { termOut.textContent = ''; return; }
-    if (head === 'exit') { await window.jack.exit(); return; }
+    if (head === 'exit') { await window.kit.exit(); return; }
     if (head === 'pwd') { termOut.textContent += (termCwd || '') + '\n'; return; }
 
     if (['open', 'e', 'edit', 'vi'].includes(head)) {
@@ -1695,10 +1703,10 @@ Keyboard Shortcuts:
     if (head === 'cd') {
       const target = arg || '~';
       let full = target;
-      if (target.startsWith('~')) { const home = await window.jack.homeDir(); full = home + '/' + target.slice(1); }
+      if (target.startsWith('~')) { const home = await window.kit.homeDir(); full = home + '/' + target.slice(1); }
       else if (!target.startsWith('/')) { const base = termCwd && termCwd.endsWith('/') ? termCwd.slice(0, -1) : (termCwd || ''); full = base + '/' + target; }
       try { full = normPath(full); } catch (_) { }
-      const st = await window.jack.stat(full);
+      const st = await window.kit.stat(full);
       if (!st.ok || !st.isDir) { termOut.textContent += '! Not a directory: ' + full + '\n'; return; }
       termCwd = full;
       updateSideHeaderToCwd();
@@ -1715,7 +1723,7 @@ Keyboard Shortcuts:
       const eqIdx = arg.indexOf('=');
       const key = arg.substring(0, eqIdx).trim();
       const value = arg.substring(eqIdx + 1).trim();
-      await window.jack.setEnv(key, value);
+      await window.kit.setEnv(key, value);
       termOut.textContent += `✓ ${key}=${value}\n`;
       return;
     }
@@ -1725,14 +1733,14 @@ Keyboard Shortcuts:
         termOut.textContent += '! usage: unset VAR\n';
         return;
       }
-      await window.jack.setEnv(arg.trim(), null);
+      await window.kit.setEnv(arg.trim(), null);
       termOut.textContent += `✓ unset ${arg.trim()}\n`;
       return;
     }
 
     if (head === 'env') {
       if (arg) {
-        const result = await window.jack.getEnv(arg.trim());
+        const result = await window.kit.getEnv(arg.trim());
         termOut.textContent += result.value ? `${arg.trim()}=${result.value}\n` : `${arg.trim()} not set\n`;
       } else {
         termOut.textContent += '! usage: env VAR (to view a specific variable)\n';
@@ -1742,8 +1750,8 @@ Keyboard Shortcuts:
 
     if (head === 'ai-key') {
       const sub = (arg.split(/\s+/)[0] || '').toLowerCase();
-      if (sub === 'clear') { const ok = await (JACK?.setKey || window.jack.setKey)(''); termOut.textContent += (ok ? '✓ cleared AI key\n' : '! Failed to clear\n'); return; }
-      if (sub === 'set') { const key = arg.replace(/^set\s+/, ''); const ok = await (JACK?.setKey || window.jack.setKey)(key); termOut.textContent += (ok ? '✓ AI key set\n' : '! Failed to set key\n'); return; }
+      if (sub === 'clear') { const ok = await (KIT?.setKey || window.kit.setKey)(''); termOut.textContent += (ok ? '✓ cleared AI key\n' : '! Failed to clear\n'); return; }
+      if (sub === 'set') { const key = arg.replace(/^set\s+/, ''); const ok = await (KIT?.setKey || window.kit.setKey)(key); termOut.textContent += (ok ? '✓ AI key set\n' : '! Failed to set key\n'); return; }
       termOut.textContent += '! usage: ai-key set <sk-...> | ai-key clear\n'; return;
     }
 
@@ -1755,7 +1763,7 @@ Keyboard Shortcuts:
 
 
     // Fallback to shell
-    const res = await window.jack.run(termCwd, cmd);
+    const res = await window.kit.run(termCwd, cmd);
     termOut.textContent += ((res.output || '') + '\n');
     termOut.scrollTop = termOut.scrollHeight;
   } catch (err) {
@@ -1765,11 +1773,11 @@ Keyboard Shortcuts:
 })
 
 // ===== Browser Mode =====
-let browserTabs = JSON.parse(localStorage.getItem('jack.tabs') || '[]')
-let activeTabId = localStorage.getItem('jack.activeTab') || null
-let bookmarks = JSON.parse(localStorage.getItem('jack.bookmarks') || '[]')
-function persistTabs() { localStorage.setItem('jack.tabs', JSON.stringify(browserTabs)); localStorage.setItem('jack.activeTab', activeTabId || '') }
-function persistBookmarks() { localStorage.setItem('jack.bookmarks', JSON.stringify(bookmarks)) }
+let browserTabs = JSON.parse(localStorage.getItem('kit.tabs') || '[]')
+let activeTabId = localStorage.getItem('kit.activeTab') || null
+let bookmarks = JSON.parse(localStorage.getItem('kit.bookmarks') || '[]')
+function persistTabs() { localStorage.setItem('kit.tabs', JSON.stringify(browserTabs)); localStorage.setItem('kit.activeTab', activeTabId || '') }
+function persistBookmarks() { localStorage.setItem('kit.bookmarks', JSON.stringify(bookmarks)) }
 
 function toUrl(q) {
   if (!q) return '';
@@ -2111,9 +2119,9 @@ const commands = [
   { id: 'file.new', name: 'New File', icon: _CIcons.file, category: 'File', action: () => { /* Add new file logic */ } },
   {
     id: 'file.open', name: 'Open File', icon: _CIcons.file, category: 'File', action: async () => {
-      const path = await window.jack?.openFile?.();
+      const path = await window.kit?.openFile?.();
       if (path) {
-        const res = await window.jack?.readFile?.(path);
+        const res = await window.kit?.readFile?.(path);
         if (res?.ok) openFileInTab(path, res.content);
       }
     }
@@ -2375,7 +2383,6 @@ commandPaletteBtn?.addEventListener('click', () => openCommandPalette());
 
 // Browser back buttons
 const browserBackBtn = document.getElementById('browserBackBtn');
-const browserExitBtn = document.getElementById('browserExitBtn');
 
 browserBackBtn?.addEventListener('click', () => {
   const webview = document.querySelector('webview');
@@ -2406,10 +2413,10 @@ document.getElementById('browserSummarizeBtn')?.addEventListener('click', async 
   try {
     const system = 'You are a helpful assistant. Summarize the following webpage content clearly and concisely, highlighting the key points.';
     const input = `URL: ${url}\nTitle: ${title || ''}\n\nContent:\n${text.substring(0, 12000)}`;
-    const resp = await window.jack.aiRequest({ input, system, model: selectedModel(), previousResponseId: termAiPreviousId });
+    const resp = await window.kit.aiRequest({ input, system, model: selectedModel(), previousResponseId: termAiPreviousId });
     if (resp?.ok) {
       if (resp.responseId) termAiPreviousId = resp.responseId;
-      await window.jack.openResultWindow({ title: `Summary: ${title || url}`, mode: 'html', html: `<pre style="white-space:pre-wrap;word-wrap:break-word">${escapeHtml(resp.text || '')}</pre>` });
+      await window.kit.openResultWindow({ title: `Summary: ${title || url}`, mode: 'html', html: `<pre style="white-space:pre-wrap;word-wrap:break-word">${escapeHtml(resp.text || '')}</pre>` });
     } else {
       out.textContent += '! ' + (resp?.error || 'AI error') + '\n';
       out.scrollTop = out.scrollHeight;
@@ -2430,7 +2437,7 @@ document.getElementById('browserGetTextBtn')?.addEventListener('click', async ()
   const title = wv.getTitle();
   const text = await getBrowserPageText(wv);
   const display = text || '(no text content found)';
-  await window.jack.openResultWindow({ title: `Text: ${title || url}`, mode: 'html', html: `<pre style="white-space:pre-wrap;word-wrap:break-word;font-size:13px">${escapeHtml(display)}</pre>` });
+  await window.kit.openResultWindow({ title: `Text: ${title || url}`, mode: 'html', html: `<pre style="white-space:pre-wrap;word-wrap:break-word;font-size:13px">${escapeHtml(display)}</pre>` });
 });
 
 document.getElementById('browserScreenshotBtn')?.addEventListener('click', async () => {
@@ -2440,7 +2447,7 @@ document.getElementById('browserScreenshotBtn')?.addEventListener('click', async
     const img = await wv.capturePage();
     const dataUrl = img.toDataURL();
     const title = wv.getTitle() || wv.getURL();
-    await window.jack.openResultWindow({ title: `Screenshot: ${title}`, mode: 'html', html: `<img src="${dataUrl}" style="max-width:100%;display:block" alt="screenshot" />` });
+    await window.kit.openResultWindow({ title: `Screenshot: ${title}`, mode: 'html', html: `<img src="${dataUrl}" style="max-width:100%;display:block" alt="screenshot" />` });
   } catch (err) {
     const out = document.getElementById('termOut');
     out.textContent += '! Screenshot failed: ' + (err?.message || String(err)) + '\n';
@@ -2460,12 +2467,12 @@ document.getElementById('browserCopyNoteBtn')?.addEventListener('click', async (
       if (out) { out.textContent += 'No text selected in browser.\n'; out.scrollTop = out.scrollHeight; }
       return;
     }
-    await window.jack.ensureFolder();
-    const homeDir = await window.jack.homeDir();
-    const clipsPath = homeDir + '/.Jack/Browser Clips.json';
+    await window.kit.ensureFolder();
+    const homeDir = await window.kit.homeDir();
+    const clipsPath = homeDir + '/.Kit/Browser Clips.json';
     let clips = { blocks: [] };
     try {
-      const r = await window.jack.readFile(clipsPath);
+      const r = await window.kit.readFile(clipsPath);
       if (r && r.ok) {
         const parsed = JSON.parse(r.data || r.content || '{}');
         if (parsed && Array.isArray(parsed.blocks)) clips = parsed;
@@ -2473,7 +2480,7 @@ document.getElementById('browserCopyNoteBtn')?.addEventListener('click', async (
     } catch(_) {}
     clips.blocks.push({ type: 'paragraph', data: { text: selection.trim() } });
     clips.blocks.push({ type: 'delimiter', data: {} });
-    await window.jack.writeFile(clipsPath, JSON.stringify(clips));
+    await window.kit.writeFile(clipsPath, JSON.stringify(clips));
     if (out) { out.textContent += 'Saved to "Browser Clips" note.\n'; out.scrollTop = out.scrollHeight; }
   } catch (err) {
     if (out) { out.textContent += '! Copy to note failed: ' + (err?.message || String(err)) + '\n'; out.scrollTop = out.scrollHeight; }
@@ -2572,6 +2579,7 @@ function openProjectSearch() {
 window.applyTheme = applyTheme;
 window.setBrowserMode = setBrowserMode;
 window.setCalendarMode = setCalendarMode;
+window.setWhiteboardMode = setWhiteboardMode;
 
 // Expose openFile function for project search
 window.openFile = async function (filePath) {
@@ -2579,10 +2587,10 @@ window.openFile = async function (filePath) {
     let result;
 
     // Use existing IPC methods
-    if (window.jack && window.jack.readFile) {
-      result = await window.jack.readFile(filePath);
-    } else if (window.jackBridge && window.jackBridge.readFile) {
-      result = await window.jackBridge.readFile(filePath);
+    if (window.kit && window.kit.readFile) {
+      result = await window.kit.readFile(filePath);
+    } else if (window.kitBridge && window.kitBridge.readFile) {
+      result = await window.kitBridge.readFile(filePath);
     } else {
       return false;
     }
@@ -2682,7 +2690,7 @@ ${content}`
 
 CONTENT:
 ${content}`);
-        const res = await window.jack.aiRequest({ input, system, model: selectedModel() });
+        const res = await window.kit.aiRequest({ input, system, model: selectedModel() });
         if (res && res.ok) {
           html = `<div class="result"><pre>${escapeHtml(res.text || '')}</pre></div>`;
         } else {
@@ -2695,7 +2703,7 @@ ${content}`);
         title += ' (Error)';
         html = `<div class="result error"><pre>${escapeHtml(String(err?.message || err))}</pre></div>`;
       }
-      await (JACK?.openResultWindow || window.jackBridge?.openResultWindow)?.({ title, html });
+      await (KIT?.openResultWindow || window.kitBridge?.openResultWindow)?.({ title, html });
     });
   });
 
@@ -2706,20 +2714,20 @@ ${content}`);
 
 // ===== Guaranteed detached window for Find Error (delegated) =====
 (function () {
-  const JACK = (window.jack || window.jackBridge);
+  const KIT = (window.kit || window.kitBridge);
   async function runFindError(content) {
     const system = 'You are a strict code review assistant. Return concise, actionable errors and fixes.';
     const input = `Identify likely bugs or errors and propose specific fixes. If relevant, include code snippets.\n\nCONTENT:\n${content || ''}`;
     try {
-      const res = await JACK?.aiRequest?.({ model: selectedModel(), system, input });
+      const res = await KIT?.aiRequest?.({ model: selectedModel(), system, input });
       const title = res?.ok ? 'Find Error' : 'Find Error (Error)';
       const html = res?.ok
         ? `<div class="result"><pre>${escapeHtml(res.text || '')}</pre></div>`
         : `<div class="result error"><pre>${escapeHtml(String(res?.error || 'Unknown error'))}</pre></div>`;
-      await JACK?.openResultWindow?.({ title, html });
+      await KIT?.openResultWindow?.({ title, html });
     } catch (err) {
       try { hideSpinner(); } catch (_) { }
-      await JACK?.openResultWindow?.({ title: 'Find Error (Error)', html: `<div class="result error"><pre>${escapeHtml(String(err?.message || err))}</pre></div>` });
+      await KIT?.openResultWindow?.({ title: 'Find Error (Error)', html: `<div class="result error"><pre>${escapeHtml(String(err?.message || err))}</pre></div>` });
     }
   }
   function getEditorContent() {
@@ -2770,7 +2778,7 @@ ${content}`);
 
 // ===== aiCheck → Detached AI error check window =====
 ; (function () {
-  const JACK = (window.jack || window.jackBridge);
+  const KIT = (window.kit || window.kitBridge);
   const btn = document.getElementById('aiCheck');
   if (!btn || btn.dataset._aiCheckHooked) return;
   btn.dataset._aiCheckHooked = '1';
@@ -2792,14 +2800,14 @@ ${content}`);
     const system = 'You are a strict code review assistant. Return concise, actionable errors and fixes.';
     const input = `Identify likely bugs or errors and propose specific fixes. If relevant, include code snippets.\n\nCONTENT:\n${content}`;
     try {
-      const res = await JACK?.aiRequest?.({ model: selectedModel(), system, input });
+      const res = await KIT?.aiRequest?.({ model: selectedModel(), system, input });
       const title = res?.ok ? 'Check Errors' : 'Check Errors (Error)';
       const html = res?.ok
         ? `<div class="result"><pre>${escapeHtml(res.text || '')}</pre></div>`
         : `<div class="result error"><pre>${escapeHtml(String(res?.error || 'Unknown error'))}</pre></div>`;
-      await JACK?.openResultWindow?.({ title, html });
+      await KIT?.openResultWindow?.({ title, html });
     } catch (err) {
-      await JACK?.openResultWindow?.({ title: 'Check Errors (Error)', html: `<div class="result error"><pre>${escapeHtml(String(err?.message || err))}</pre></div>` });
+      await KIT?.openResultWindow?.({ title: 'Check Errors (Error)', html: `<div class="result error"><pre>${escapeHtml(String(err?.message || err))}</pre></div>` });
     } finally {
       aiInFlight = false;
     }
@@ -2925,20 +2933,20 @@ Examples:
     }
     if (attachPath) {
       try {
-        const st2 = await window.jack.stat(attachPath);
+        const st2 = await window.kit.stat(attachPath);
         if (st2 && st2.ok) {
           if (st2.isDir) {
-            const ls = await window.jack.run(attachPath, 'ls -1');
+            const ls = await window.kit.run(attachPath, 'ls -1');
             const names = (ls.output || '').split('\n').filter(Boolean);
             for (const nm of names) {
               const p = (attachPath.replace(/\/+$/, '') + '/' + nm);
-              const rf = await window.jack.readFile(p);
+              const rf = await window.kit.readFile(p);
               if (rf.ok) {
                 blocks.push(`<file name="${nm}">\n${rf.data}\n</file>`);
               }
             }
           } else {
-            const rf = await window.jack.readFile(attachPath);
+            const rf = await window.kit.readFile(attachPath);
             if (rf.ok) {
               const n = attachPath.split(/[\\/]/).pop();
               blocks.push(`<file name="${n}">\n${rf.data}\n</file>`);
@@ -3002,7 +3010,7 @@ Use the page content to answer questions about what the user is reading.${canSea
     out.textContent += `[AI] ~${approxTokens} tokens | ~$${approxCost} — sending…\n`;
     out.scrollTop = out.scrollHeight;
     showSpinner();
-    const resp = await window.jack.aiRequest({ input, system, model, previousResponseId: termAiPreviousId, webSearch: aiCtx.webSearch !== false });
+    const resp = await window.kit.aiRequest({ input, system, model, previousResponseId: termAiPreviousId, webSearch: aiCtx.webSearch !== false });
     let aiOut = resp && resp.ok ? (resp.text || '') : ('! AI error: ' + (resp?.error || 'unknown'));
     if (resp?.ok) {
       if (resp.responseId) termAiPreviousId = resp.responseId;
@@ -3033,7 +3041,7 @@ async function refreshSidebar() {
   try {
     if (document.body.classList.contains('browser-mode')) { renderBrowserSidebar(); return }
     const cwd = termCwd; if (!cwd) return
-    const listed = await window.jack.list(cwd)
+    const listed = await window.kit.list(cwd)
     treeEl.innerHTML = ''
     if (listed.ok) treeEl.appendChild(renderTree(listed.items, 0, cwd))
   } catch (_) { }
@@ -3506,7 +3514,7 @@ function wbScheduleSave() {
   clearTimeout(wbSaveTimer);
   wbSaveTimer = setTimeout(async () => {
     try {
-      await window.jack.saveBoard(JSON.stringify({ camera: wbCamera, elements: wbElements }));
+      await window.kit.saveBoard(JSON.stringify({ camera: wbCamera, elements: wbElements }));
     } catch (err) {
       console.error('[wb] save failed:', err);
     }
@@ -3515,7 +3523,7 @@ function wbScheduleSave() {
 
 async function wbLoad() {
   try {
-    const res = await window.jack.loadBoard();
+    const res = await window.kit.loadBoard();
     if (res?.ok && res.data) {
       const parsed = JSON.parse(res.data);
       wbElements = parsed.elements || [];
@@ -3868,7 +3876,7 @@ document.getElementById('wbZoomReset')?.addEventListener('click', () => {
 document.getElementById('wbDownloadBtn')?.addEventListener('click', async () => {
   const r = document.getElementById('wbContainer')?.getBoundingClientRect();
   if (!r) return;
-  await window.jack.captureBoard({ x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) });
+  await window.kit.captureBoard({ x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) });
 });
 
 wbColorPickerEl?.addEventListener('click', (e) => {
@@ -3901,27 +3909,27 @@ wbImageInput?.addEventListener('change', (e) => {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Set working directory — use starred folder if set, otherwise home dir
-    const homeDir = await window.jack.homeDir();
-    const starredFolder = localStorage.getItem('jackStarredFolder');
+    const homeDir = await window.kit.homeDir();
+    const starredFolder = localStorage.getItem('kitStarredFolder');
     termCwd = starredFolder || homeDir || '/';
     updateSideHeaderToCwd();
     updateStarredFolderBtn();
     refreshSidebar();
 
-    // Ensure .Jack folder exists
-    await window.jack.ensureFolder();
+    // Ensure .Kit folder exists
+    await window.kit.ensureFolder();
 
     // Resolve README path
-    const jackEditorResult = await window.jack.getDefaultDir();
-    const jackEditorPath = typeof jackEditorResult === 'string' ? jackEditorResult : (jackEditorResult.path || jackEditorResult);
-    const readmePath = jackEditorPath + '/README.md';
+    const kitEditorResult = await window.kit.getDefaultDir();
+    const kitEditorPath = typeof kitEditorResult === 'string' ? kitEditorResult : (kitEditorResult.path || kitEditorResult);
+    const readmePath = kitEditorPath + '/README.md';
 
     // Session restore — if a previous session exists, reopen that file
     let sessionRestored = false;
     try {
-      const session = JSON.parse(localStorage.getItem('jackSession') || 'null');
+      const session = JSON.parse(localStorage.getItem('kitSession') || 'null');
       if (session && session.file) {
-        const res = await window.jack.readFile(session.file);
+        const res = await window.kit.readFile(session.file);
         if (res && res.ok) {
           openFileInTab(session.file, res.data);
           sessionRestored = true;
@@ -3943,7 +3951,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Open README as default tab when there is no session to restore
     if (!sessionRestored) {
       try {
-        const result = await window.jack.readFile(readmePath);
+        const result = await window.kit.readFile(readmePath);
         if (result && result.ok) openFileInTab(readmePath, result.data);
       } catch(_) {}
     }
@@ -3981,7 +3989,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.path) {
-      const res = await window.jack.readFile(file.path);
+      const res = await window.kit.readFile(file.path);
       if (res && res.ok) { openFileInTab(file.path, res.data); }
     }
   });
@@ -4013,7 +4021,7 @@ async function showDefinitionResults(word, grepOutput) {
   }
   if (results.length === 1) {
     const r = results[0];
-    const fileRes = await window.jack.readFile(r.file);
+    const fileRes = await window.kit.readFile(r.file);
     if (fileRes && fileRes.ok) {
       openFileInTab(r.file, fileRes.data);
       setTimeout(() => {
@@ -4045,7 +4053,7 @@ document.addEventListener('keydown', async (e) => {
     if (!cwd) return;
     const pattern = `function ${word}|const ${word} =|let ${word} =|var ${word} =|class ${word}|def ${word}|export function ${word}|${word}\\s*\\(`;
     try {
-      const result = await window.jack.run(cwd, `grep -rn -E "${pattern.replace(/"/g, '\\"')}" --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.java" --include="*.rb" 2>/dev/null | head -20`);
+      const result = await window.kit.run(cwd, `grep -rn -E "${pattern.replace(/"/g, '\\"')}" --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.java" --include="*.rb" 2>/dev/null | head -20`);
       await showDefinitionResults(word, result.output || result.stdout || '');
     } catch (err) {
       const out = document.getElementById('termOut');
@@ -4057,11 +4065,11 @@ document.addEventListener('keydown', async (e) => {
 // ===== Session Restore =====
 function saveSession() {
   if (!currentFile) {
-    try { localStorage.removeItem('jackSession'); } catch(_) {}
+    try { localStorage.removeItem('kitSession'); } catch(_) {}
     return;
   }
   const cursor = editor ? editor.state.selection.main.head : 0;
-  try { localStorage.setItem('jackSession', JSON.stringify({ file: currentFile, cursor, cwd: termCwd })); } catch(_) {}
+  try { localStorage.setItem('kitSession', JSON.stringify({ file: currentFile, cursor, cwd: termCwd })); } catch(_) {}
 }
 window.addEventListener('beforeunload', saveSession);
 
@@ -4095,8 +4103,8 @@ window.addEventListener('beforeunload', saveSession);
 async function handleCommand(value) {
   try {
     if (!value || !value.trim()) return;
-    if (window.jack && window.jack.run) {
-      await window.jack.run(value.trim());
+    if (window.kit && window.kit.run) {
+      await window.kit.run(value.trim());
     } else {
     }
   } catch (e) {
@@ -4125,15 +4133,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const side = document.getElementById('sidebar');
   async function refreshSidebar() {
     try {
-      const cwd = (window.termCwd || (await window.jack?.homedir?.()) || '');
+      const cwd = (window.termCwd || (await window.kit?.homedir?.()) || '');
       let resp = null;
-      if (window.jack?.list) {
-        resp = await window.jack.list(cwd);
+      if (window.kit?.list) {
+        resp = await window.kit.list(cwd);
         // support both shapes: array or {ok,items}
         const items = Array.isArray(resp) ? resp : (resp && resp.items ? resp.items : []);
         renderSidebar(items, cwd);
-      } else if (window.jack?.fsList) {
-        resp = await window.jack.fsList(cwd);
+      } else if (window.kit?.fsList) {
+        resp = await window.kit.fsList(cwd);
         const items = resp && resp.items ? resp.items : [];
         renderSidebar(items, cwd);
       }
@@ -4155,7 +4163,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await refreshSidebar();
           } else {
             const p = (cwd ? (cwd.replace(/\/$/, '') + '/' + it.name) : it.name);
-            const res = await (window.jack?.readFile ? window.jack.readFile(p) : null);
+            const res = await (window.kit?.readFile ? window.kit.readFile(p) : null);
             if (res && res.ok && window.setEditorText) window.setEditorText(res.data);
           }
         } catch (_) { }
@@ -4207,7 +4215,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== Settings Panel =====
 function loadSettings() {
   try {
-    const saved = JSON.parse(localStorage.getItem('jackSettings') || '{}');
+    const saved = JSON.parse(localStorage.getItem('kitSettings') || '{}');
     const defaultAiCtx = { calendar: true, bookmarks: true, browserPage: true, webSearch: true };
     editorSettings = { fontSize: 14, tabSize: 2, lineWrap: false, autoSave: 0, aiContext: defaultAiCtx, ...saved };
     editorSettings.aiContext = { ...defaultAiCtx, ...(saved.aiContext || {}) };
@@ -4230,14 +4238,14 @@ function applyEditorSettings() {
     autoSaveTimer = setInterval(() => {
       if (currentFile && dirty) {
         const content = editor?.state?.doc?.toString() || '';
-        window.jack.writeFile(currentFile, content).then(r => { if (r.ok) { dirty = false; dirtyDot.classList.remove('on'); } }).catch(() => {});
+        window.kit.writeFile(currentFile, content).then(r => { if (r.ok) { dirty = false; dirtyDot.classList.remove('on'); } }).catch(() => {});
       }
     }, editorSettings.autoSave * 1000);
   }
 }
 
 function saveSettings() {
-  try { localStorage.setItem('jackSettings', JSON.stringify(editorSettings)); } catch (_) {}
+  try { localStorage.setItem('kitSettings', JSON.stringify(editorSettings)); } catch (_) {}
 }
 
 function openSettingsPanel() {
@@ -4321,15 +4329,15 @@ async function refreshGitPanel() {
   if (!termCwd) return;
   try {
     // Branches
-    const branchRes = await window.jack.run(termCwd, 'git branch');
-    const currentBranch = (await window.jack.run(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0];
+    const branchRes = await window.kit.run(termCwd, 'git branch');
+    const currentBranch = (await window.kit.run(termCwd, 'git rev-parse --abbrev-ref HEAD')).output.trim().split('\n')[0];
     const branchSelect = document.getElementById('gitBranchSelect');
     if (branchSelect && branchRes.ok) {
       const branches = branchRes.output.split('\n').map(b => b.replace(/^\*\s*/, '').trim()).filter(Boolean);
       branchSelect.innerHTML = branches.map(b => `<option value="${escapeHtml(b)}"${b === currentBranch ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
       branchSelect.onchange = async () => {
         const log = document.getElementById('gitLogOutput');
-        const r = await window.jack.run(termCwd, `git checkout ${branchSelect.value}`);
+        const r = await window.kit.run(termCwd, `git checkout ${branchSelect.value}`);
         if (log) log.textContent = r.output;
         await refreshGitPanel();
         updateGitInfo();
@@ -4337,7 +4345,7 @@ async function refreshGitPanel() {
     }
 
     // Changed files
-    const statusRes = await window.jack.run(termCwd, 'git status --porcelain');
+    const statusRes = await window.kit.run(termCwd, 'git status --porcelain');
     const fileList = document.getElementById('gitFileList');
     if (fileList) {
       fileList.innerHTML = '';
@@ -4369,7 +4377,7 @@ async function refreshGitPanel() {
             if (!diff) return;
             li.classList.toggle('git-file-active');
             fileList.querySelectorAll('.git-file-item').forEach(el => { if (el !== li) el.classList.remove('git-file-active'); });
-            const r = await window.jack.run(termCwd, `git diff -- "${fname}"`);
+            const r = await window.kit.run(termCwd, `git diff -- "${fname}"`);
             diff.innerHTML = '';
             const lines2 = (r.output || 'No diff').split('\n');
             lines2.forEach(dl => {
@@ -4416,8 +4424,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const checked = fileList ? [...fileList.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value) : [];
     if (!checked.length) { alert('No files selected.'); return; }
     const addCmd = checked.map(f => `git add -- "${f}"`).join(' && ');
-    const r1 = await window.jack.run(termCwd, addCmd);
-    const r2 = await window.jack.run(termCwd, `git commit -m "${msg.replace(/"/g, '\\"')}"`);
+    const r1 = await window.kit.run(termCwd, addCmd);
+    const r2 = await window.kit.run(termCwd, `git commit -m "${msg.replace(/"/g, '\\"')}"`);
     _gitLog(((r1.output || '') + '\n' + (r2.output || '')).trim());
     if (document.getElementById('gitCommitMsg')) document.getElementById('gitCommitMsg').value = '';
     await refreshGitPanel();
@@ -4426,14 +4434,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('gitPullBtn')?.addEventListener('click', async () => {
     _gitLog('Pulling…');
-    const r = await window.jack.run(termCwd, 'git pull');
+    const r = await window.kit.run(termCwd, 'git pull');
     _gitLog(r.output || r.error || 'Done');
     updateGitInfo();
   });
 
   document.getElementById('gitPushBtn')?.addEventListener('click', async () => {
     _gitLog('Pushing…');
-    const r = await window.jack.run(termCwd, 'git push');
+    const r = await window.kit.run(termCwd, 'git push');
     _gitLog(r.output || r.error || 'Done');
     updateGitInfo();
   });
@@ -4463,15 +4471,15 @@ function calDateKey(year, month, day) {
 
 async function calGetFilePath() {
   if (calFilePath) return calFilePath;
-  const home = await window.jack.homeDir();
-  calFilePath = home + '/.Jack/calendar.json';
+  const home = await window.kit.homeDir();
+  calFilePath = home + '/.Kit/calendar.json';
   return calFilePath;
 }
 
 async function calLoad() {
   try {
     const p = await calGetFilePath();
-    const r = await window.jack.readFile(p);
+    const r = await window.kit.readFile(p);
     if (r.ok) {
       const raw = JSON.parse(r.data || '{}');
       // Backward compat: old format was plain object with date keys
@@ -4489,7 +4497,7 @@ async function calLoad() {
 async function calSave() {
   try {
     const p = await calGetFilePath();
-    await window.jack.writeFile(p, JSON.stringify(calendarData, null, 2));
+    await window.kit.writeFile(p, JSON.stringify(calendarData, null, 2));
   } catch (_) {}
 }
 
@@ -5028,7 +5036,7 @@ window.setEmailMode = setEmailMode;
 
 async function openEmailSetupModal() {
   // Pre-fill with existing config (password excluded for security)
-  const existing = await JACK.email.getConfig().catch(() => null);
+  const existing = await KIT.email.getConfig().catch(() => null);
   document.getElementById('emailImapPort').value = existing?.imap?.port ?? '993';
   document.getElementById('emailImapSsl').checked = existing?.imap?.secure ?? true;
   document.getElementById('emailUser').value = existing?.imap?.user ?? '';
@@ -5042,7 +5050,7 @@ async function openEmailSetupModal() {
 }
 
 async function emailBootstrap() {
-  const hasConfig = await JACK.email.hasConfig().catch(() => false);
+  const hasConfig = await KIT.email.hasConfig().catch(() => false);
   if (!hasConfig) {
     openEmailSetupModal();
   } else {
@@ -5051,10 +5059,10 @@ async function emailBootstrap() {
 }
 
 function emailSaveCache(messages) {
-  try { localStorage.setItem('jackEmailCache', JSON.stringify({ messages, ts: Date.now() })); } catch (_) {}
+  try { localStorage.setItem('kitEmailCache', JSON.stringify({ messages, ts: Date.now() })); } catch (_) {}
 }
 function emailLoadCache() {
-  try { const r = localStorage.getItem('jackEmailCache'); return r ? JSON.parse(r) : null; } catch (_) { return null; }
+  try { const r = localStorage.getItem('kitEmailCache'); return r ? JSON.parse(r) : null; } catch (_) { return null; }
 }
 
 let emailCurrentFolder = 'INBOX';
@@ -5089,7 +5097,7 @@ async function emailFetchInbox(folder = emailCurrentFolder) {
     if (inner) inner.innerHTML = '<div style="padding:40px 0;text-align:center;color:#383838;font-size:13px">Loading…</div>';
   }
 
-  const result = await JACK.email.fetchInbox(folder).catch(e => ({ ok: false, error: e.message }));
+  const result = await KIT.email.fetchInbox(folder).catch(e => ({ ok: false, error: e.message }));
   document.getElementById('emailRefreshBar')?.remove();
 
   if (!result.ok) {
@@ -5248,14 +5256,14 @@ async function emailOpenMessage(uid) {
     const heroAvatar = document.getElementById('emailMsgHeroAvatar');
     if (heroAvatar) { heroAvatar.style.background = '#C8C3BC'; heroAvatar.textContent = '…'; }
   }
-  const result = await JACK.email.fetchMessage(uid).catch(e => ({ ok: false, error: e.message }));
+  const result = await KIT.email.fetchMessage(uid).catch(e => ({ ok: false, error: e.message }));
   if (!result.ok) {
     document.getElementById('emailMsgSubject').textContent = 'Error: ' + (result.error || 'Failed to load');
     return;
   }
   renderEmailContent(result.message);
   // Mark as read (fire and forget)
-  JACK.email.markRead(uid).catch(() => {});
+  KIT.email.markRead(uid).catch(() => {});
   // Update local seen state
   const msg = emailMessages.find(m => m.uid === uid);
   if (msg) {
@@ -5414,7 +5422,7 @@ async function emailSend() {
   if (!to) { if (status) status.textContent = 'Recipient required'; return; }
   if (status) status.textContent = 'Sending…';
   const opts = { to, subject, text, ...(emailComposeReplyData || {}) };
-  const result = await JACK.email.send(opts).catch(e => ({ ok: false, error: e.message }));
+  const result = await KIT.email.send(opts).catch(e => ({ ok: false, error: e.message }));
   if (result.ok) {
     if (status) status.textContent = 'Sent!';
     setTimeout(() => {
@@ -5463,21 +5471,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Reply
   document.getElementById('emailReplyBtn')?.addEventListener('click', async () => {
     if (emailOpenUid == null) return;
-    const result = await JACK.email.fetchMessage(emailOpenUid).catch(() => null);
+    const result = await KIT.email.fetchMessage(emailOpenUid).catch(() => null);
     if (result?.ok) emailCompose({ type: 'reply', msg: result.message });
   });
 
   // Forward
   document.getElementById('emailForwardBtn')?.addEventListener('click', async () => {
     if (emailOpenUid == null) return;
-    const result = await JACK.email.fetchMessage(emailOpenUid).catch(() => null);
+    const result = await KIT.email.fetchMessage(emailOpenUid).catch(() => null);
     if (result?.ok) emailCompose({ type: 'forward', msg: result.message });
   });
 
   // Archive
   document.getElementById('emailArchiveBtn')?.addEventListener('click', async () => {
     if (emailOpenUid == null) return;
-    await JACK.email.moveToTrash(emailOpenUid).catch(() => {});
+    await KIT.email.moveToTrash(emailOpenUid).catch(() => {});
     // Remove from local list
     const idx = emailMessages.findIndex(m => m.uid === emailOpenUid);
     if (idx !== -1) emailMessages.splice(idx, 1);
@@ -5537,7 +5545,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (status) { status.style.color = ''; status.textContent = 'Testing IMAP connection…'; }
-    const result = await JACK.email.testConnection(config).catch(e => ({ ok: false, error: e.message }));
+    const result = await KIT.email.testConnection(config).catch(e => ({ ok: false, error: e.message }));
     if (result.ok) {
       if (status) { status.style.color = '#4ade80'; status.textContent = '✓ Connection successful'; }
     } else {
@@ -5555,19 +5563,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (status) { status.style.color = ''; status.textContent = 'Testing connection…'; }
-    const testResult = await JACK.email.testConnection(config).catch(e => ({ ok: false, error: e.message }));
+    const testResult = await KIT.email.testConnection(config).catch(e => ({ ok: false, error: e.message }));
     if (!testResult.ok) {
       const hint = emailConnectionHint(testResult.error || '');
       if (status) { status.style.color = '#ef4444'; status.textContent = `✗ ${testResult.error}${hint ? ' — ' + hint : ''}`; }
       return;
     }
     if (status) { status.style.color = ''; status.textContent = 'Saving…'; }
-    const saveResult = await JACK.email.saveConfig(config).catch(e => ({ ok: false, error: e.message }));
+    const saveResult = await KIT.email.saveConfig(config).catch(e => ({ ok: false, error: e.message }));
     if (!saveResult.ok) {
       if (status) { status.style.color = '#ef4444'; status.textContent = 'Save error: ' + (saveResult.error || ''); }
       return;
     }
-    localStorage.removeItem('jackEmailCache'); // clear stale cache on account change
+    localStorage.removeItem('kitEmailCache'); // clear stale cache on account change
     document.getElementById('emailSetupModal')?.classList.add('hidden');
     emailFetchInbox();
   });
@@ -5620,7 +5628,7 @@ document.addEventListener('keydown', (e) => {
     case 'r': {
       e.preventDefault();
       if (emailOpenUid != null) {
-        JACK.email.fetchMessage(emailOpenUid).then(result => {
+        KIT.email.fetchMessage(emailOpenUid).then(result => {
           if (result?.ok) emailCompose({ type: 'reply', msg: result.message });
         }).catch(() => {});
       }
@@ -5629,7 +5637,7 @@ document.addEventListener('keydown', (e) => {
     case 'f': {
       e.preventDefault();
       if (emailOpenUid != null) {
-        JACK.email.fetchMessage(emailOpenUid).then(result => {
+        KIT.email.fetchMessage(emailOpenUid).then(result => {
           if (result?.ok) emailCompose({ type: 'forward', msg: result.message });
         }).catch(() => {});
       }
@@ -5661,7 +5669,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-//  JACK AGENT — autonomous tool-calling loop
+//  KIT AGENT — autonomous tool-calling loop
 // ═══════════════════════════════════════════════════════════
 
 let agentInFlight = false;
@@ -5670,13 +5678,13 @@ let agentPreviousId = null;
 let agentCwd = null; // folder set via "Open Folder" picker
 
 // ── Project Rules ──────────────────────────────────────────
-// Reads .jackrules or AGENT.md from the given directory.
+// Reads .kitrules or AGENT.md from the given directory.
 // Returns the rules text, or '' if none found.
 async function loadProjectRules(dir) {
   if (!dir) return '';
-  for (const name of ['.jackrules', 'AGENT.md']) {
+  for (const name of ['.kitrules', 'AGENT.md']) {
     try {
-      const res = await window.jack.readFile(dir.replace(/\/$/, '') + '/' + name);
+      const res = await window.kit.readFile(dir.replace(/\/$/, '') + '/' + name);
       if (res?.ok && res.data?.trim()) return res.data.trim();
     } catch (_) {}
   }
@@ -5751,29 +5759,29 @@ async function agentExecuteTool(name, argsObj) {
   try {
     switch (name) {
       case 'read_file': {
-        const res = await window.jack.readFile(argsObj.path);
+        const res = await window.kit.readFile(argsObj.path);
         if (!res.ok) return `Error: ${res.error}`;
         return res.data;
       }
       case 'write_file': {
-        const res = await window.jack.writeFile(argsObj.path, argsObj.content);
+        const res = await window.kit.writeFile(argsObj.path, argsObj.content);
         if (!res.ok) return `Error: ${res.error}`;
         return `Written ${argsObj.path}`;
       }
       case 'list_dir': {
-        const res = await window.jack.list(argsObj.path);
+        const res = await window.kit.list(argsObj.path);
         if (!res.ok) return `Error: ${res.error}`;
         return res.items.map(i => (i.dir ? '[dir] ' : '      ') + i.name).join('\n') || '(empty)';
       }
       case 'run_command': {
         const cwd = termCwd || '/';
-        const res = await window.jack.run(cwd, argsObj.command);
+        const res = await window.kit.run(cwd, argsObj.command);
         return res.output || '(no output)';
       }
       case 'search_project': {
         const cwd = termCwd || '/';
         const q = argsObj.query.replace(/'/g, "'\\''");
-        const res = await window.jack.run(cwd, `grep -rn '${q}' . 2>/dev/null | head -60`);
+        const res = await window.kit.run(cwd, `grep -rn '${q}' . 2>/dev/null | head -60`);
         return res.output || '(no matches)';
       }
       default:
@@ -5849,9 +5857,9 @@ async function agentRun() {
   const goal = inputEl?.value.trim();
   if (!goal) return;
 
-  const model = document.getElementById('agentModelSelect')?.value || 'gpt-4.1';
+  const model = document.getElementById('agentModelSelect')?.value || 'gpt-5.4';
   const provider = /^claude-/.test(model) ? 'anthropic' : 'openai';
-  const hasKey = await window.jack.hasKey(provider);
+  const hasKey = await window.kit.hasKey(provider);
   if (!hasKey) {
     agentLogBubble(`No ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API key set. Open AI Keys from the toolbar to add one.`, 'ai');
     return;
@@ -5861,23 +5869,23 @@ async function agentRun() {
   agentCancelled = false;
   agentSetRunning(true);
   agentSetStatus('Starting\u2026');
-  const jackHome = (await window.jack.homeDir().catch(() => '~')) + '/.Jack';
+  const kitHome = (await window.kit.homeDir().catch(() => '~')) + '/.Kit';
   const activeCwd = agentCwd || termCwd;
   const projectRules = await loadProjectRules(activeCwd);
-  const systemPrompt = `You are Jack Agent, an autonomous coding assistant embedded in the Jack editor.
+  const systemPrompt = `You are Kit Agent, an autonomous coding assistant embedded in the Kit editor.
 Current open file: ${currentFile || '(none)'}
 ${agentCwd ? `Workspace directory: ${agentCwd}` : `Current working directory: ${termCwd || '(unknown)'}`}
-Jack home directory: ${jackHome}
-${projectRules ? `\nPROJECT RULES (from .jackrules / AGENT.md — follow strictly):\n${projectRules}\n` : ''}
+Kit home directory: ${kitHome}
+${projectRules ? `\nPROJECT RULES (from .kitrules / AGENT.md — follow strictly):\n${projectRules}\n` : ''}
 
 FILE STORAGE RULES (important — follow these strictly):
-- All files you create must go inside ${jackHome}/ in a meaningful subfolder.
-- Use ${jackHome}/projects/<project-name>/ for code projects and scripts.
-- Use ${jackHome}/notes/ for text notes or documents.
-- Use ${jackHome}/data/ for data files, CSVs, JSON datasets.
-- Use ${jackHome}/scratch/ for quick one-off experiments.
+- All files you create must go inside ${kitHome}/ in a meaningful subfolder.
+- Use ${kitHome}/projects/<project-name>/ for code projects and scripts.
+- Use ${kitHome}/notes/ for text notes or documents.
+- Use ${kitHome}/data/ for data files, CSVs, JSON datasets.
+- Use ${kitHome}/scratch/ for quick one-off experiments.
 - Always create the target directory first using run_command("mkdir -p <path>") before writing files into it.
-- Never write files to the Jack app source directory or any system directory.
+- Never write files to the Kit app source directory or any system directory.
 
 EFFICIENCY RULES (strictly follow):
 - Never call the same tool with the same arguments twice. Trust the result from the first call.
@@ -5905,7 +5913,7 @@ Use the provided tools to complete the user's task. Give a short final summary.`
       const thinkEl = agentShowThinking();
       agentSetStatus(`Step ${i + 1}\u2026`);
 
-      const res = await window.jack.agentRequest({
+      const res = await window.kit.agentRequest({
         model,
         system: systemPrompt,
         input: currentInput,
@@ -5964,9 +5972,9 @@ async function agentLoadProjects() {
   if (!list) return;
   list.innerHTML = '<div class="agent-proj-empty">Loading…</div>';
   try {
-    const home = await window.jack.homeDir();
-    const projectsPath = home + '/.Jack/projects';
-    const res = await window.jack.list(projectsPath);
+    const home = await window.kit.homeDir();
+    const projectsPath = home + '/.Kit/projects';
+    const res = await window.kit.list(projectsPath);
     if (!res.ok || !res.items?.length) {
       list.innerHTML = '<div class="agent-proj-empty">No projects yet</div>';
       return;
@@ -5990,7 +5998,7 @@ async function agentExpandProject(path, rowEl) {
     existing.remove(); rowEl.classList.remove('active'); return;
   }
   rowEl.classList.add('active');
-  const res = await window.jack.list(path);
+  const res = await window.kit.list(path);
   const fileList = document.createElement('div');
   fileList.className = 'agent-proj-files';
   if (!res.ok || !res.items?.length) {
@@ -6036,9 +6044,9 @@ async function checkAgentRules(dir) {
   if (!els.length) return;
   let found = false;
   if (dir) {
-    for (const name of ['.jackrules', 'AGENT.md']) {
+    for (const name of ['.kitrules', 'AGENT.md']) {
       try {
-        const r = await window.jack.stat(dir.replace(/\/$/, '') + '/' + name);
+        const r = await window.kit.stat(dir.replace(/\/$/, '') + '/' + name);
         if (r?.ok) { found = true; break; }
       } catch (_) {}
     }
@@ -6048,7 +6056,7 @@ async function checkAgentRules(dir) {
 }
 
 document.getElementById('agentOpenFolderBtn')?.addEventListener('click', async () => {
-  const folder = await window.jack.openFolder();
+  const folder = await window.kit.openFolder();
   if (!folder) return;
   agentCwd = folder;
   agentUpdateWorkspacePath();
@@ -6061,12 +6069,12 @@ document.getElementById('agentClearFolderBtn')?.addEventListener('click', () => 
 
 document.getElementById('agentSidebarRefresh')?.addEventListener('click', agentLoadProjects);
 
-// Init Rules: create .jackrules + AGENT.md in current folder
+// Init Rules: create .kitrules + AGENT.md in current folder
 document.getElementById('initRulesBtn')?.addEventListener('click', async () => {
   const dir = termCwd;
   if (!dir) { alert('No working directory set.'); return; }
 
-  const jackrulesPath = dir + '/.jackrules';
+  const kitrulesPath = dir + '/.kitrules';
   const agentMdPath = dir + '/AGENT.md';
 
   const agentMdTemplate = `# Agent Rules
@@ -6096,8 +6104,8 @@ document.getElementById('initRulesBtn')?.addEventListener('click', async () => {
 `;
 
   const tasks = [
-    window.jack.writeFile(jackrulesPath, '# Project-specific rules for Jack Agent\n'),
-    window.jack.writeFile(agentMdPath, agentMdTemplate),
+    window.kit.writeFile(kitrulesPath, '# Project-specific rules for Kit Agent\n'),
+    window.kit.writeFile(agentMdPath, agentMdTemplate),
   ];
   const results = await Promise.all(tasks);
   if (results.some(r => !r?.ok)) {
@@ -6129,9 +6137,9 @@ async function agentUpdateKeyIndicator() {
   const el = document.getElementById('agentKeyIndicator');
   if (!el) return;
   try {
-    const model = document.getElementById('agentModelSelect')?.value || 'gpt-4.1';
+    const model = document.getElementById('agentModelSelect')?.value || 'gpt-5.4';
     const provider = /^claude-/.test(model) ? 'anthropic' : 'openai';
-    const has = await window.jack.hasKey(provider);
+    const has = await window.kit.hasKey(provider);
     el.classList.toggle('connected', !!has);
     el.classList.toggle('disconnected', !has);
     el.title = has ? `${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} key connected` : `No ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} key set`;
@@ -6168,7 +6176,7 @@ document.getElementById('agentWelcome')?.addEventListener('click', (e) => {
 document.getElementById('agentAttachFile')?.addEventListener('click', async () => {
   if (!currentFile) return;
   try {
-    const content = await window.jack.readFile(currentFile);
+    const content = await window.kit.readFile(currentFile);
     const input = document.getElementById('agentInput');
     if (!input) return;
     const header = `[File: ${currentFile}]\n\`\`\`\n${content}\n\`\`\`\n\n`;
@@ -6215,7 +6223,7 @@ document.addEventListener('keydown', (e) => {
 commands.push(
   {
     id: 'agent.open',
-    name: 'Open Jack Agent',
+    name: 'Open Kit Agent',
     category: 'Agent',
     action: () => setAgentMode(true)
   },
@@ -6323,11 +6331,11 @@ const ST_SAMPLE = {
     {
       id: 'save_briefing',
       type: 'file',
-      label: 'Save briefing to ~/.Jack/briefing.md',
+      label: 'Save briefing to ~/.Kit/briefing.md',
       collapsed: false,
       config: {
         operation: 'write',
-        path: '~/.Jack/briefing.md',
+        path: '~/.Kit/briefing.md',
         content: '# Dev Briefing — {{date}}\n\n{{ai_summary.output}}\n\n---\n_Generated by Stairs on {{date}}_'
       }
     }
@@ -6336,12 +6344,12 @@ const ST_SAMPLE = {
 
 // ── Load all staircases ───────────────────────────────────────
 async function stLoadAll() {
-  let all = await window.jack.stairs.list();
+  let all = await window.kit.stairs.list();
   // Seed or refresh the built-in sample staircase
   const hasSample = all.find(s => s.id === ST_SAMPLE.id);
   if (!hasSample || (hasSample.version || 0) < ST_SAMPLE.version) {
-    await window.jack.stairs.save(ST_SAMPLE);
-    all = await window.jack.stairs.list();
+    await window.kit.stairs.save(ST_SAMPLE);
+    all = await window.kit.stairs.list();
   }
   const list = stEl('stProjectList');
   if (!list) return;
@@ -6381,7 +6389,7 @@ function stOpen(sc) {
 async function stSave() {
   if (!stairsCurrent) return;
   stairsCurrent.name = stEl('stName').value.trim() || 'Untitled';
-  await window.jack.stairs.save(stairsCurrent);
+  await window.kit.stairs.save(stairsCurrent);
   stLoadAll();
 }
 
@@ -6527,7 +6535,7 @@ function stBuildConfigFields(step) {
                   <option${c.operation === 'append' ? ' selected' : ''}>append</option>
                 </select></div>
                 <div><div class="st-field-label">Path</div>
-                <input class="st-field-input" data-key="path" value="${c.path || ''}" placeholder="~/.Jack/output.md" /></div>
+                <input class="st-field-input" data-key="path" value="${c.path || ''}" placeholder="~/.Kit/output.md" /></div>
               </div>
               <div class="st-field-label" style="margin-top:6px">Content (write/append only)</div>
               <textarea class="st-field-textarea" data-key="content" placeholder="{{prev_step.output}}">${c.content || ''}</textarea>${tip}`;
@@ -6625,7 +6633,7 @@ async function stRunFrom(startIndex) {
   }
 
   stairsCurrent.lastRun = new Date().toISOString();
-  await window.jack.stairs.save(stairsCurrent);
+  await window.kit.stairs.save(stairsCurrent);
 
   stairsRunning = false;
   stEl('stRunBtn').classList.remove('hidden');
@@ -6638,31 +6646,31 @@ async function stRunStep(step, outputs) {
   switch (step.type) {
     case 'code': {
       const cmd = stResolve(c.command, outputs);
-      return await window.jack.stairs.runCode(cmd);
+      return await window.kit.stairs.runCode(cmd);
     }
     case 'ai': {
       const input  = stResolve(c.prompt, outputs);
       const system = c.system ? stResolve(c.system, outputs) : 'You are a helpful assistant.';
-      const res = await window.jack.aiRequest({ input, system, model: 'gpt-4o-mini' });
+      const res = await window.kit.aiRequest({ input, system, model: 'gpt-5.4-mini' });
       if (!res?.ok) return { ok: false, output: res?.error || 'AI request failed' };
       return { ok: true, output: res.text || '' };
     }
     case 'http': {
       const url    = stResolve(c.url,    outputs);
       const body   = c.body ? stResolve(c.body, outputs) : undefined;
-      return await window.jack.stairs.runHttp({ url, method: c.method || 'GET', body });
+      return await window.kit.stairs.runHttp({ url, method: c.method || 'GET', body });
     }
     case 'file': {
       const p = stResolve(c.path, outputs);
       if (c.operation === 'read') {
-        return await window.jack.stairs.fileRead(p);
+        return await window.kit.stairs.fileRead(p);
       } else {
         let content = stResolve(c.content, outputs);
         if (c.operation === 'append') {
-          const existing = await window.jack.stairs.fileRead(p);
+          const existing = await window.kit.stairs.fileRead(p);
           content = (existing.ok ? existing.output : '') + '\n' + content;
         }
-        return await window.jack.stairs.fileWrite(p, content);
+        return await window.kit.stairs.fileWrite(p, content);
       }
     }
     default:
@@ -6692,7 +6700,7 @@ Config shapes:
 Use {{step_id.output}} to chain steps. Keep steps focused and lean.`;
 
   try {
-    const res = await window.jack.aiRequest({
+    const res = await window.kit.aiRequest({
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: `Create a staircase automation for: ${description}` }
@@ -6709,7 +6717,7 @@ Use {{step_id.output}} to chain steps. Keep steps focused and lean.`;
     stairsCurrent.steps   = (data.steps || []).map(s => ({ ...s, id: s.id || stUid() }));
     stEl('stName').value  = stairsCurrent.name;
 
-    await window.jack.stairs.save(stairsCurrent);
+    await window.kit.stairs.save(stairsCurrent);
     stLoadAll();
     stRenderCanvas();
     stLog(`✦ Generated ${stairsCurrent.steps.length} steps`, 'log-ai');
@@ -6749,7 +6757,7 @@ stEl('stNewBtn')?.addEventListener('click', () => {
   stEl('stName').value = '';
   stEl('stDraftBadge').classList.remove('hidden');
   stEl('stPublishedBadge').classList.add('hidden');
-  window.jack.stairs.save(stairsCurrent).then(() => { stLoadAll(); stRenderCanvas(); });
+  window.kit.stairs.save(stairsCurrent).then(() => { stLoadAll(); stRenderCanvas(); });
 });
 
 stEl('stName')?.addEventListener('change', () => stSave());
@@ -6771,7 +6779,7 @@ stEl('stPublishBtn')?.addEventListener('click', async () => {
 stEl('stDeleteStaircaseBtn')?.addEventListener('click', async () => {
   if (!stairsCurrent) return;
   if (!confirm(`Delete "${stairsCurrent.name}"?`)) return;
-  await window.jack.stairs.delete(stairsCurrent.id);
+  await window.kit.stairs.delete(stairsCurrent.id);
   stairsCurrent = null;
   stairsOutputs = {};
   stEl('stName').value = '';

@@ -1,5 +1,5 @@
 {
-  "name": "jack",
+  "name": "kit",
   "version": "1.9.60",
   "private": true,
   "type": "module",
@@ -13,8 +13,8 @@
     "dist:mac": "npm run build:prod && electron-builder --mac --publish never"
   },
   "build": {
-    "appId": "com.jack.workspace",
-    "productName": "Jack",
+    "appId": "com.kit.workspace",
+    "productName": "Kit",
     "icon": "icon.png",
     "asar": true,
     "files": [
