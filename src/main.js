@@ -217,19 +217,29 @@ ipcMain.handle('fs:mkdir', async (_e, dir)=>{ try{ await fsP.mkdir(dir, { recurs
 ipcMain.handle('fs:delete', async (_e, p)=>{ try{ const st = await fsP.stat(p); if(st.isDirectory()) await fsP.rm(p, { recursive:true, force:true }); else await fsP.unlink(p); return {ok:true} } catch(e){ return {ok:false, error:e.message} } })
 // Persistent environment variables for terminal session
 const terminalEnv = { ...process.env };
+let runningTermProc = null;
 
 ipcMain.handle('term:run', async (_e, cwd, command)=>{
   return new Promise((resolve)=>{
     const win = BrowserWindow.getAllWindows()[0];
     const send = (chunk) => { try { win?.webContents.send('term:output', chunk) } catch(_){} };
     const proc = spawn(command, [], { cwd, shell: true, env: terminalEnv });
-    let stderr = '';
-    const timeout = setTimeout(()=>{ proc.kill(); resolve({ ok: false, output: '! Command timed out\n' }) }, 120_000);
+    runningTermProc = proc;
+    const timeout = setTimeout(()=>{ proc.kill(); runningTermProc = null; resolve({ ok: false, output: '! Command timed out\n' }) }, 120_000);
     proc.stdout.on('data', (d)=> send(d.toString()));
-    proc.stderr.on('data', (d)=>{ const s = d.toString(); stderr += s; send(s); });
-    proc.on('close', (code)=>{ clearTimeout(timeout); resolve({ ok: code === 0, output: '' }); });
-    proc.on('error', (e)=>{ clearTimeout(timeout); resolve({ ok: false, output: '! ' + e.message + '\n' }); });
+    proc.stderr.on('data', (d)=> send(d.toString()));
+    proc.on('close', (code)=>{ clearTimeout(timeout); runningTermProc = null; resolve({ ok: code === 0, output: '' }); });
+    proc.on('error', (e)=>{ clearTimeout(timeout); runningTermProc = null; resolve({ ok: false, output: '! ' + e.message + '\n' }); });
   });
+})
+
+ipcMain.handle('term:kill', ()=>{
+  if (runningTermProc) {
+    try { runningTermProc.kill('SIGINT'); } catch(_) { try { runningTermProc.kill(); } catch(__){} }
+    runningTermProc = null;
+    return { ok: true };
+  }
+  return { ok: false };
 })
 
 ipcMain.handle('term:exec', async (_e, cwd, command)=>{

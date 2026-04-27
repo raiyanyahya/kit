@@ -1520,6 +1520,16 @@ if (window.kit?.onTermOutput) {
   });
 }
 
+// Ctrl+C kills the running process from anywhere in the terminal area
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'c' && (e.ctrlKey || e.metaKey) && window._termRunning) {
+    e.preventDefault();
+    termOut.textContent += '^C\n';
+    termOut.scrollTop = termOut.scrollHeight;
+    window.kit?.killTerm?.();
+  }
+});
+
 async function openFileFromTerminal(pathLike) {
   const p = pathLike.trim(); if (!p) return
   let full = p
@@ -1782,13 +1792,14 @@ Keyboard Shortcuts:
     // Fallback to shell — output is streamed live via onTermOutput
     const prevPlaceholder = termIn.placeholder;
     termIn.disabled = true;
-    termIn.placeholder = 'running…';
+    termIn.placeholder = 'Ctrl+C to stop…';
+    window._termRunning = true;
     try {
       const res = await window.kit.run(termCwd, cmd);
-      // res.output is only non-empty for spawn errors not yet streamed
       if (res.output) { termOut.textContent += res.output; termOut.scrollTop = termOut.scrollHeight; }
       else { termOut.textContent += '\n'; termOut.scrollTop = termOut.scrollHeight; }
     } finally {
+      window._termRunning = false;
       termIn.disabled = false;
       termIn.placeholder = prevPlaceholder;
       termIn.focus();
