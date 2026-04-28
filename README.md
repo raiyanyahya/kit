@@ -1,6 +1,6 @@
 # Kit 🏵️
 
-![Electron](https://img.shields.io/badge/Electron-40%2B-47848F?style=flat-square&logo=electron&logoColor=white) ![Node](https://img.shields.io/badge/Node.js-20%2B-brightgreen?style=flat-square&logo=node.js&logoColor=white) [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey?style=flat-square) [![Build & Release](https://github.com/raiyanyahya/Kit/actions/workflows/build.yml/badge.svg)](https://github.com/raiyanyahya/Kit/actions/workflows/build.yml)
+![Electron](https://img.shields.io/badge/Electron-40%2B-47848F?style=flat-square&logo=electron&logoColor=white) ![Node](https://img.shields.io/badge/Node.js-20%2B-brightgreen?style=flat-square&logo=node.js&logoColor=white) [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey?style=flat-square) [![CI](https://github.com/raiyanyahya/Kit/actions/workflows/ci.yml/badge.svg)](https://github.com/raiyanyahya/Kit/actions/workflows/ci.yml)
 
 **Your entire dev environment. One window. AI woven through everything.**
 
