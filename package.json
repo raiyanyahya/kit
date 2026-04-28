@@ -22,7 +22,6 @@
       "!src/renderer.js",
       "!src/renderer.bundle.js.map",
       "icons/**/*",
-      "WELCOME.md",
       "package.json"
     ],
     "mac": {
