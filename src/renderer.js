@@ -1900,6 +1900,7 @@ function setBrowserMode(on) {
     if (sideHeaderTitle) updateSideHeaderToCwd();
     bw?.classList.add('hidden');
     refreshSidebar();
+    updateStatus();
   }
 }
 browserToggle?.addEventListener('click', () => setBrowserMode(!document.body.classList.contains('browser-mode')));
@@ -3773,6 +3774,8 @@ function setWhiteboardMode(on) {
     document.body.classList.remove('browser-mode', 'calendar-mode', 'email-mode', 'agent-mode', 'stairs-mode', 'stairs-sidebar-open');
     document.getElementById('markdownPreview')?.classList.remove('show');
     wbLoad();
+  } else {
+    updateStatus();
   }
 }
 
@@ -4800,6 +4803,8 @@ async function setCalendarMode(on) {
     calRenderDayHeader();
     calRenderGrid();
     calRenderSidebar();
+  } else {
+    updateStatus();
   }
 }
 
@@ -4970,6 +4975,8 @@ function setEmailMode(on) {
     document.getElementById('emailMessageView')?.classList.add('hidden');
     emailOpenUid = null;
     setTimeout(emailBootstrap, 0);
+  } else {
+    updateStatus();
   }
 }
 document.getElementById('emailToggle')?.addEventListener('click', () =>
@@ -6139,6 +6146,8 @@ function setAgentMode(on) {
     agentUpdateWelcome();
     agentUpdateKeyIndicator();
     setTimeout(() => document.getElementById('agentInput')?.focus(), 150);
+  } else {
+    updateStatus();
   }
 }
 
@@ -6274,6 +6283,7 @@ function setStairsMode(on) {
     stLoadAll();
   } else {
     document.body.classList.remove('stairs-sidebar-open');
+    updateStatus();
   }
 }
 
