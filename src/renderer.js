@@ -433,7 +433,11 @@ function updateStatus() {
   if (previewBtn) {
     const isMarkdownFile = name.toLowerCase().endsWith('.md');
     const isEditorMode = !document.body.classList.contains('browser-mode') &&
-      !document.body.classList.contains('email-mode');
+      !document.body.classList.contains('email-mode') &&
+      !document.body.classList.contains('agent-mode') &&
+      !document.body.classList.contains('whiteboard-mode') &&
+      !document.body.classList.contains('stairs-mode') &&
+      !document.body.classList.contains('calendar-mode');
 
     if (isMarkdownFile && isEditorMode) {
       previewBtn.classList.add('show');
@@ -612,7 +616,11 @@ window.addEventListener('keydown', (e) => {
   // Close tab (Cmd+W / Ctrl+W) - only in editor mode
   if (meta && e.key.toLowerCase() === 'w' && !e.shiftKey) {
     const isEditorMode = !document.body.classList.contains('browser-mode') &&
-      !document.body.classList.contains('email-mode');
+      !document.body.classList.contains('email-mode') &&
+      !document.body.classList.contains('agent-mode') &&
+      !document.body.classList.contains('whiteboard-mode') &&
+      !document.body.classList.contains('stairs-mode') &&
+      !document.body.classList.contains('calendar-mode');
     if (isEditorMode && activeTabIndex >= 0) {
       e.preventDefault();
       closeEditorTab(activeTabIndex);
@@ -1877,6 +1885,7 @@ function setBrowserMode(on) {
   document.body.classList.toggle('browser-mode', !!on);
   if (on) {
     document.body.classList.remove('calendar-mode', 'email-mode', 'whiteboard-mode', 'agent-mode', 'stairs-mode', 'stairs-sidebar-open');
+    document.getElementById('markdownPreview')?.classList.remove('show');
     // Don't manually set sidebar display - let CSS handle it
   }
   const bw = document.getElementById('browserWrap');
@@ -3762,6 +3771,7 @@ function setWhiteboardMode(on) {
   document.body.classList.toggle('whiteboard-mode', !!on);
   if (on) {
     document.body.classList.remove('browser-mode', 'calendar-mode', 'email-mode', 'agent-mode', 'stairs-mode', 'stairs-sidebar-open');
+    document.getElementById('markdownPreview')?.classList.remove('show');
     wbLoad();
   }
 }
@@ -4780,6 +4790,7 @@ async function setCalendarMode(on) {
   document.body.classList.toggle('calendar-mode', !!on);
   if (on) {
     document.body.classList.remove('browser-mode', 'email-mode', 'whiteboard-mode', 'agent-mode', 'stairs-mode', 'cal-sidebar-open', 'stairs-sidebar-open');
+    document.getElementById('markdownPreview')?.classList.remove('show');
     await calLoad();
     calViewYear = new Date().getFullYear();
     calViewMonth = new Date().getMonth();
@@ -4954,6 +4965,7 @@ function setEmailMode(on) {
   document.body.classList.toggle('email-mode', !!on);
   if (on) {
     document.body.classList.remove('browser-mode', 'calendar-mode', 'whiteboard-mode', 'agent-mode', 'stairs-mode', 'email-sidebar-open', 'stairs-sidebar-open');
+    document.getElementById('markdownPreview')?.classList.remove('show');
     document.getElementById('emailListView')?.classList.remove('hidden');
     document.getElementById('emailMessageView')?.classList.add('hidden');
     emailOpenUid = null;
@@ -6123,6 +6135,7 @@ function setAgentMode(on) {
   if (on) {
     document.body.classList.remove('browser-mode', 'calendar-mode', 'email-mode', 'whiteboard-mode', 'stairs-mode',
       'email-sidebar-open', 'cal-sidebar-open', 'agent-sidebar-open', 'stairs-sidebar-open');
+    document.getElementById('markdownPreview')?.classList.remove('show');
     agentUpdateWelcome();
     agentUpdateKeyIndicator();
     setTimeout(() => document.getElementById('agentInput')?.focus(), 150);
@@ -6257,6 +6270,7 @@ function setStairsMode(on) {
     document.body.classList.remove('browser-mode', 'calendar-mode', 'email-mode', 'whiteboard-mode', 'agent-mode',
       'email-sidebar-open', 'cal-sidebar-open', 'agent-sidebar-open');
     document.body.classList.add('stairs-sidebar-open');
+    document.getElementById('markdownPreview')?.classList.remove('show');
     stLoadAll();
   } else {
     document.body.classList.remove('stairs-sidebar-open');
