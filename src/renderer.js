@@ -606,11 +606,15 @@ window.addEventListener('keydown', (e) => {
     saveFlow();
   }
 
-  // Find in file
+  // Find in file (editor) or find in page (browser)
   if (meta && e.key.toLowerCase() === 'f') {
     e.preventDefault();
-    openSearchPanel(editor);
-    editor.focus();
+    if (document.body.classList.contains('browser-mode')) {
+      browserOpenFind();
+    } else {
+      openSearchPanel(editor);
+      editor.focus();
+    }
   }
 
   // Close tab (Cmd+W / Ctrl+W) - only in editor mode
@@ -1887,6 +1891,8 @@ function setBrowserMode(on) {
     document.body.classList.remove('calendar-mode', 'email-mode', 'whiteboard-mode', 'agent-mode', 'stairs-mode', 'stairs-sidebar-open');
     document.getElementById('markdownPreview')?.classList.remove('show');
     // Don't manually set sidebar display - let CSS handle it
+  } else {
+    browserCloseFind();
   }
   const bw = document.getElementById('browserWrap');
   if (on) {
@@ -2312,8 +2318,69 @@ const browserBackBtn = document.getElementById('browserBackBtn');
 
 browserBackBtn?.addEventListener('click', () => {
   const webview = document.querySelector('webview');
-  if (webview && webview.canGoBack()) {
-    webview.goBack();
+  if (webview && webview.canGoBack()) webview.goBack();
+});
+
+document.getElementById('browserForwardBtn')?.addEventListener('click', () => {
+  const webview = document.querySelector('webview');
+  if (webview && webview.canGoForward()) webview.goForward();
+});
+
+document.getElementById('browserReloadBtn')?.addEventListener('click', () => {
+  const webview = document.querySelector('webview');
+  if (webview) webview.reload();
+});
+
+// ── Find in page ────────────────────────────────────────────────────────────
+
+const browserFindBar   = document.getElementById('browserFindBar');
+const browserFindInput = document.getElementById('browserFindInput');
+const browserFindCount = document.getElementById('browserFindCount');
+
+function browserOpenFind() {
+  if (!browserFindBar) return;
+  browserFindBar.classList.remove('hidden');
+  browserFindInput.focus();
+  browserFindInput.select();
+}
+
+function browserCloseFind() {
+  if (!browserFindBar) return;
+  browserFindBar.classList.add('hidden');
+  const wv = document.getElementById('webview');
+  if (wv) wv.stopFindInPage('clearSelection');
+  browserFindCount.textContent = '';
+}
+
+function browserFind(forward = true) {
+  const wv = document.getElementById('webview');
+  const query = browserFindInput?.value;
+  if (!wv || !query) return;
+  wv.findInPage(query, { forward, findNext: true });
+}
+
+document.getElementById('browserFindBtn')?.addEventListener('click', browserOpenFind);
+document.getElementById('browserFindClose')?.addEventListener('click', browserCloseFind);
+document.getElementById('browserFindNext')?.addEventListener('click', () => browserFind(true));
+document.getElementById('browserFindPrev')?.addEventListener('click', () => browserFind(false));
+
+browserFindInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.shiftKey ? browserFind(false) : browserFind(true); }
+  if (e.key === 'Escape') browserCloseFind();
+});
+
+browserFindInput?.addEventListener('input', () => {
+  const wv = document.getElementById('webview');
+  const query = browserFindInput.value;
+  if (!wv) return;
+  if (query) wv.findInPage(query, { forward: true, findNext: false });
+  else { wv.stopFindInPage('clearSelection'); browserFindCount.textContent = ''; }
+});
+
+// Listen for find results to show match count
+document.getElementById('webview')?.addEventListener('found-in-page', (e) => {
+  if (e.result?.matches !== undefined) {
+    browserFindCount.textContent = e.result.matches ? `${e.result.activeMatchOrdinal}/${e.result.matches}` : 'No results';
   }
 });
 

@@ -1000,6 +1000,41 @@ body.dark .browser-back-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.browser-find-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.browser-find-bar.hidden { display: none; }
+.browser-find-bar input {
+  flex: 1;
+  max-width: 260px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input-bg, var(--bg));
+  color: var(--fg);
+  font-size: 12px;
+  outline: none;
+}
+.browser-find-bar button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 2px 7px;
+  font-size: 13px;
+  line-height: 1;
+}
+.browser-find-bar button:hover { background: rgba(0,0,0,0.08); }
+body.dark .browser-find-bar button:hover { background: rgba(255,255,255,0.1); }
+.find-count { color: var(--dim, #888); font-size: 11px; min-width: 52px; }
+
 .mode-back-btn {
   background: none;
   border: none;
