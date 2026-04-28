@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="icons/kiticon-100.png" alt="Kit" width="80" />
-</p>
-
 # Kit ✦
 
 **One window. Every tool you need. Nothing you don't.**
@@ -9,10 +5,6 @@
 Kit is a desktop workspace that replaces the chaos of juggling a code editor, browser, terminal, AI assistant, email client, whiteboard, and automation tool across a dozen separate windows. It brings everything into a single, fast, keyboard-first application — built for developers, writers, researchers, and anyone who thinks in text and builds things.
 
 Stop switching apps. Start making things.
-
-<p align="center">
-  <img src="MediaAssets/KitLanding.png" alt="Kit workspace screenshot" width="100%" />
-</p>
 
 ---
 
@@ -89,8 +81,6 @@ A visual pipeline builder for turning repetitive multi-step work into one-click 
 
 Build a workflow once. Name it. Run it again and again with a single click. Each step shows its output inline. Stop mid-run if something looks wrong. Outputs from one step flow into the next — the whole pipeline is connected.
 
-Example workflows: fetch data from an API → summarise with AI → write to a report file. Or: run a test suite → if failures, send yourself an email. Or: read a log file → ask the AI to find anomalies → append findings to a daily briefing.
-
 ### 🎨 Whiteboard
 
 A freehand drawing canvas for visual thinking. When words aren't enough — when you need to sketch an architecture, map out a flow, or just think with shapes — the whiteboard is one keystroke away.
@@ -107,8 +97,6 @@ Toggle with **Ctrl+W** and go straight back to the editor when you're done.
 ### 📧 Email Client
 
 A full IMAP/SMTP email client. Configure your inbox once — works with Gmail, Fastmail, Outlook, or any standard provider. Read, reply, compose, send, mark as read, move to trash. Your inbox without leaving your workspace.
-
-Why is email in a code editor? Because context-switching to check email costs more than you think. Having it one keystroke away means you check it intentionally, not reflexively.
 
 ### 📅 Calendar
 
@@ -128,43 +116,29 @@ The AI assistant is woven through the editor and terminal, not bolted on as a si
 - The AI knows what file you have open, what page you're browsing, and what's in your calendar and bookmarks
 - Full conversation memory — it remembers what you said earlier in the session
 - Switch models mid-conversation with `--model <name>`
-- Include your current file with `--file`, or files from any path with `--path <p>`
 
 **AI commands:**
 ```
-/ai <prompt>                 Ask anything
-/ai <prompt> --file          Include current file as context
-/ai code <description>       Generate code
-/ai explain --file           Explain the current file
-/ai fix <error> --file       Fix a bug
-/ai test --file              Generate unit tests
-/ai refactor --file          Improve code structure
-/ai optimize --file          Optimise for performance
-/ai document --file          Generate documentation
-/ai review --file            Code review
-/ai convert <lang> --file    Convert to another language
+ai <prompt>                  Ask anything
+ai <prompt> --file           Include current file as context
+ai code <description>        Generate code
+ai explain --file            Explain the current file
+ai fix <error> --file        Fix a bug
+ai test --file               Generate unit tests
+ai refactor --file           Improve code structure
+ai optimize --file           Optimise for performance
+ai document --file           Generate documentation
+ai review --file             Code review
+ai convert <lang> --file     Convert to another language
 ```
 
 ### 🔍 Project Search
 
-**Ctrl+K** opens a fast, full-text search across your entire project. Searches both file names and file contents. Results appear as you type. Navigate with arrow keys, open with Enter — jumps directly to the matching line in the editor. No configuration, no indexing setup, no waiting.
+**Ctrl+K** opens a fast, full-text search across your entire project. Searches both file names and file contents. Results appear as you type. Navigate with arrow keys, open with Enter — jumps directly to the matching line in the editor.
 
 ### ⌨️ Command Palette
 
 **Ctrl+Shift+P** opens a command palette for everything else — open files, switch modes, trigger AI actions, toggle settings. Type to filter, arrow keys to navigate, Enter to run. Keyboard-first, always.
-
----
-
-## AI Models
-
-Kit connects to OpenAI and Anthropic simultaneously. Set keys for one or both — use whatever you have.
-
-| Provider | Models |
-|---|---|
-| **OpenAI** | gpt-5.4, gpt-5.4-mini, gpt-5.4-nano, gpt-4.1, gpt-4.1-mini, o3, o4-mini |
-| **Anthropic** | Claude Opus 4.7, Claude Sonnet 4.6, Claude Haiku 4.5 |
-
-Keys are stored encrypted via Electron's `safeStorage` — never in plain text, never leaving your machine.
 
 ---
 
@@ -189,16 +163,14 @@ Keys are stored encrypted via Electron's `safeStorage` — never in plain text, 
 
 ---
 
-## Getting Started
+## AI Models
 
-```bash
-git clone https://github.com/raiyanyahya/Kit.git
-cd Kit
-npm install
-npm start
-```
+| Provider | Models |
+|---|---|
+| **OpenAI** | gpt-5.4, gpt-5.4-mini, gpt-5.4-nano, gpt-4.1, gpt-4.1-mini, o3, o4-mini |
+| **Anthropic** | Claude Opus 4.7, Claude Sonnet 4.6, Claude Haiku 4.5 |
 
-On first launch, click the key icon in the status bar and add your OpenAI or Anthropic API key. That's it. Everything else is already there.
+Keys are stored encrypted via Electron's `safeStorage` — never in plain text, never leaving your machine.
 
 ---
 
@@ -240,8 +212,4 @@ If you write and build things — code, essays, systems, ideas — Kit was made 
 
 *Kit is for people who want their tools to get out of the way.*
 
-*If Kit helps your work, give it a ⭐ — it helps more people find it.*
-
----
-
-<a target="_blank" href="https://icons8.com/icon/uSfbRTf3kxH4/seed-of-life">mandala</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+*If Kit helps your work, give it a ⭐ on GitHub — it helps more people find it.*

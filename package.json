@@ -15,13 +15,14 @@
   "build": {
     "appId": "com.kit.workspace",
     "productName": "Kit",
-    "icon": "icon.png",
+    "icon": "icons/kiticon-100.png",
     "asar": true,
     "files": [
       "src/**/*",
       "!src/renderer.js",
       "!src/renderer.bundle.js.map",
       "icons/**/*",
+      "WELCOME.md",
       "package.json"
     ],
     "mac": {
@@ -34,7 +35,7 @@
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "icon": "icon.png",
+      "icon": "icons/kiticon-100.png",
       "background": null,
       "window": {
         "width": 540,

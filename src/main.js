@@ -82,7 +82,7 @@ ipcMain.handle('kit:captureBoard', async (_e, rect) => {
 
 
 ipcMain.handle('kit:getReadmePath', () => {
-  return { ok: true, path: path.join(app.getAppPath(), 'README.md') };
+  return { ok: true, path: path.join(app.getAppPath(), 'WELCOME.md') };
 });
 
 try { app.setName('Kit') } catch(_) {}
