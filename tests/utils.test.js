@@ -39,6 +39,36 @@ describe('_termColorize', () => {
   });
 });
 
+// ── _termColorizeAnsi ────────────────────────────────────────
+
+describe('_termColorizeAnsi', () => {
+  test('wraps green ANSI code in colored span', () => {
+    const result = _termColorizeAnsi('\x1b[32mok\x1b[0m');
+    expect(result).toContain('color:');
+    expect(result).toContain('ok');
+  });
+  test('closes all open spans on reset', () => {
+    const result = _termColorizeAnsi('\x1b[32mtext\x1b[0m');
+    const opens = (result.match(/<span/g) || []).length;
+    const closes = (result.match(/<\/span>/g) || []).length;
+    expect(opens).toBe(closes);
+  });
+  test('handles bold ANSI code', () => {
+    const result = _termColorizeAnsi('\x1b[1mbold\x1b[0m');
+    expect(result).toContain('font-weight:bold');
+  });
+  test('handles bold + color together', () => {
+    const result = _termColorizeAnsi('\x1b[1;32mtext\x1b[0m');
+    expect(result).toContain('font-weight:bold');
+    expect(result).toContain('color:');
+  });
+  test('escapes HTML inside ANSI output', () => {
+    const result = _termColorizeAnsi('\x1b[32m<b>\x1b[0m');
+    expect(result).not.toContain('<b>');
+    expect(result).toContain('&lt;b&gt;');
+  });
+});
+
 // ── fuzzyMatch ────────────────────────────────────────────────
 
 describe('fuzzyMatch', () => {
@@ -76,6 +106,12 @@ describe('normPath', () => {
   });
   test('handles multiple consecutive slashes via empty segments', () => {
     expect(normPath('/foo//bar')).toBe('/foo/bar');
+  });
+  test('clamps to root when going above it', () => {
+    expect(normPath('/foo/../../bar')).toBe('/bar');
+  });
+  test('handles trailing slash by ignoring empty segment', () => {
+    expect(normPath('/foo/bar/')).toBe('/foo/bar');
   });
 });
 
@@ -120,6 +156,16 @@ describe('toUrl', () => {
   test('passes through http URL unchanged', () => {
     expect(toUrl('http://example.com')).toBe('http://example.com');
   });
+  test('passes through file:// URLs unchanged', () => {
+    expect(toUrl('file:///home/user/index.html')).toBe('file:///home/user/index.html');
+  });
+  test('passes through about:blank unchanged', () => {
+    expect(toUrl('about:blank')).toBe('about:blank');
+  });
+  test('encodes special characters in search queries', () => {
+    const result = toUrl('hello world');
+    expect(result).toContain('hello%20world');
+  });
 });
 
 // ── _providerFor ─────────────────────────────────────────────
@@ -155,11 +201,30 @@ describe('parseMarkdown', () => {
   test('converts *text* to em', () => {
     expect(parseMarkdown('*italic*')).toContain('<em>italic</em>');
   });
+  test('converts ***text*** to strong+em', () => {
+    expect(parseMarkdown('***both***')).toContain('<strong><em>both</em></strong>');
+  });
   test('converts backtick code to code tag', () => {
     expect(parseMarkdown('`code`')).toContain('<code>code</code>');
   });
+  test('converts triple-backtick block to pre+code', () => {
+    expect(parseMarkdown('```\nconst x = 1;\n```')).toContain('<pre><code>');
+  });
+  test('converts > blockquote', () => {
+    expect(parseMarkdown('> note')).toContain('<blockquote>note</blockquote>');
+  });
+  test('converts unordered list item', () => {
+    expect(parseMarkdown('- item')).toContain('<li>item</li>');
+  });
+  test('converts ordered list item', () => {
+    expect(parseMarkdown('1. first')).toContain('<li>first</li>');
+  });
   test('blocks javascript: links', () => {
     const result = parseMarkdown('[click](javascript:alert(1))');
+    expect(result).toContain('href="#"');
+  });
+  test('blocks data: links', () => {
+    const result = parseMarkdown('[x](data:text/html,<h1>xss</h1>)');
     expect(result).toContain('href="#"');
   });
   test('escapes raw HTML to prevent XSS', () => {

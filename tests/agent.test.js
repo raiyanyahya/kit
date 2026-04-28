@@ -109,6 +109,50 @@ describe('agentExecuteTool — list_dir', () => {
   });
 });
 
+describe('agentExecuteTool — write_file error', () => {
+  test('returns error message when write fails', async () => {
+    const kit = { writeFile: jest.fn().mockResolvedValue({ ok: false, error: 'disk full' }) };
+    const result = await agentExecuteTool('write_file', { path: '/out.js', content: 'x' }, kit, { write_file: true, run_command: false });
+    expect(result).toContain('Error:');
+  });
+});
+
+describe('agentExecuteTool — list_dir', () => {
+  test('returns (empty) for empty directory', async () => {
+    const kit = { list: jest.fn().mockResolvedValue({ ok: true, items: [] }) };
+    const result = await agentExecuteTool('list_dir', { path: '/empty' }, kit, { write_file: true, run_command: true });
+    expect(result).toBe('(empty)');
+  });
+
+  test('returns error message when listing fails', async () => {
+    const kit = { list: jest.fn().mockResolvedValue({ ok: false, error: 'permission denied' }) };
+    const result = await agentExecuteTool('list_dir', { path: '/secret' }, kit, { write_file: true, run_command: true });
+    expect(result).toContain('Error:');
+  });
+});
+
+describe('agentExecuteTool — search_project', () => {
+  test('returns grep output', async () => {
+    const kit = { exec: jest.fn().mockResolvedValue({ ok: true, output: 'src/index.js:1:const x' }) };
+    const result = await agentExecuteTool('search_project', { query: 'const x' }, kit, { write_file: true, run_command: true });
+    expect(result).toContain('src/index.js');
+  });
+
+  test('returns (no matches) when grep finds nothing', async () => {
+    const kit = { exec: jest.fn().mockResolvedValue({ ok: true, output: '' }) };
+    const result = await agentExecuteTool('search_project', { query: 'zzznomatch' }, kit, { write_file: true, run_command: true });
+    expect(result).toBe('(no matches)');
+  });
+});
+
+describe('agentExecuteTool — unknown tool', () => {
+  test('returns unknown tool message', async () => {
+    const kit = {};
+    const result = await agentExecuteTool('fly_spaceship', {}, kit, { write_file: true, run_command: true });
+    expect(result).toContain('Unknown tool');
+  });
+});
+
 // ── loadProjectRules ─────────────────────────────────────────
 
 describe('loadProjectRules', () => {
@@ -145,5 +189,16 @@ describe('loadProjectRules', () => {
     const result = await loadProjectRules(null, kit);
     expect(result).toBe('');
     expect(kit.readFile).not.toHaveBeenCalled();
+  });
+
+  test('handles trailing slash in dir path', async () => {
+    const kit = {
+      readFile: jest.fn().mockImplementation((path) => {
+        if (path === '/project/.kitrules') return Promise.resolve({ ok: true, data: 'rules' });
+        return Promise.resolve({ ok: false });
+      })
+    };
+    const result = await loadProjectRules('/project/', kit);
+    expect(result).toBe('rules');
   });
 });

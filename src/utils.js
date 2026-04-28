@@ -105,7 +105,7 @@ export function parseMarkdown(text) {
     .replace(/^- (.+)$/gim, '<li>$1</li>')
     .replace(/^(\d+)\. (.+)$/gim, '<li>$2</li>')
     .replace(/(<li>.*?<\/li>)(\s*<li>.*?<\/li>)*/gim, '<ul>$&</ul>')
-    .replace(/^> (.+)$/gim, '<blockquote>$1</blockquote>')
+    .replace(/^&gt; (.+)$/gim, '<blockquote>$1</blockquote>')
     .replace(/^---$/gim, '<hr>')
     .replace(/\n\n/gim, '</p><p>')
     .replace(/\n/gim, '<br>');
