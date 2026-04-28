@@ -1,4 +1,4 @@
-# Kit ✦
+# Kit 🏵️
 
 **One window. Every tool you need. Nothing you don't.**
 
