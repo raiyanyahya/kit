@@ -33,6 +33,12 @@
         { "target": "dmg", "arch": ["universal"] }
       ]
     },
+    "linux": {
+      "category": "Development",
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] }
+      ]
+    },
     "dmg": {
       "title": "${productName} ${version}",
       "icon": "icons/kiticon-100.png",
