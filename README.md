@@ -1,18 +1,12 @@
-<p align="center">
-  <img src="icons/kiticon-100.png" alt="Kit" width="80" />
-</p>
-
 # Kit 🏵️
+
+![Electron](https://img.shields.io/badge/Electron-40%2B-47848F?style=flat-square&logo=electron&logoColor=white) ![Node](https://img.shields.io/badge/Node.js-20%2B-brightgreen?style=flat-square&logo=node.js&logoColor=white) ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey?style=flat-square)
 
 **One window. Every tool you need. Nothing you don't.**
 
 Kit is a desktop workspace that replaces the chaos of juggling a code editor, browser, terminal, AI assistant, email client, whiteboard, and automation tool across a dozen separate windows. It brings everything into a single, fast, keyboard-first application — built for developers, writers, researchers, and anyone who thinks in text and builds things.
 
 Stop switching apps. Start making things.
-
-<p align="center">
-  <img src="MediaAssets/KitLanding.png" alt="Kit workspace screenshot" width="100%" />
-</p>
 
 ---
 
