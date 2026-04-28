@@ -138,9 +138,6 @@ function createWindow(){
     }
   })
   win.loadFile(path.join(__dirname, 'index.html'))
-  if (process.platform === 'linux') {
-    app.setIcon(nativeImage.createFromPath(path.join(__dirname, '..', 'icons', 'kiticon-512.png')));
-  }
 }
 app.whenReady().then(async () => {
   KEY_FILE = path.join(app.getPath('userData'), '.kitkey');
