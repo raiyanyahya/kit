@@ -6278,7 +6278,6 @@ function setStairsMode(on) {
   if (on) {
     document.body.classList.remove('browser-mode', 'calendar-mode', 'email-mode', 'whiteboard-mode', 'agent-mode',
       'email-sidebar-open', 'cal-sidebar-open', 'agent-sidebar-open');
-    document.body.classList.add('stairs-sidebar-open');
     document.getElementById('markdownPreview')?.classList.remove('show');
     stLoadAll();
   } else {
