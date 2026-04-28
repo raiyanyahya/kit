@@ -15,7 +15,7 @@
   "build": {
     "appId": "com.kit.workspace",
     "productName": "Kit",
-    "icon": "icons/kiticon-100.png",
+    "icon": "icons/kiticon-512.png",
     "asar": true,
     "files": [
       "src/**/*",
