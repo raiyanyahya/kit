@@ -128,6 +128,7 @@ function createWindow(){
     width: 1100, height: 900, minWidth: 1100, minHeight: 700,
     frame: false, transparent: false, backgroundColor: '#ffffff',
     title: 'Kit',
+    icon: path.join(__dirname, '..', 'icons', 'kiticon-512.png'),
     webPreferences: {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.cjs'),
