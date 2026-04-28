@@ -25,6 +25,7 @@ import { ruby as rubyLegacy } from '@codemirror/legacy-modes/mode/ruby'
 import { swift as swiftLegacy } from '@codemirror/legacy-modes/mode/swift'
 import { toml as tomlLegacy } from '@codemirror/legacy-modes/mode/toml'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { _termEsc, _termColorize, _termColorizeAnsi, fuzzyMatch, normPath, getTabName, toUrl, _providerFor, parseMarkdown } from './utils.js'
 
 const $ = s => document.querySelector(s)
 
@@ -86,7 +87,6 @@ const _MODEL_GROUPS = [
   ]},
 ];
 
-function _providerFor(model) { return /^claude-/.test(model) ? 'anthropic' : 'openai'; }
 
 // ── Custom model picker ───────────────────────────────────────────────────────
 function _buildModelPicker(selectEl) {
@@ -221,15 +221,6 @@ function addRecentCommand(id) {
   try { localStorage.setItem('kitRecentCmds', JSON.stringify(recentCommands)); } catch(_) {}
 }
 
-function fuzzyMatch(query, str) {
-  let qi = 0, score = 0;
-  str = str.toLowerCase(); query = query.toLowerCase();
-  for (let i = 0; i < str.length && qi < query.length; i++) {
-    if (str[i] === query[qi]) { score++; qi++; }
-  }
-  return qi === query.length ? score : -1;
-}
-
 // ===== Tab Management System =====
 let openTabs = []; // Array of { filePath, content, dirty, langExt, scrollPos }
 let activeTabIndex = -1;
@@ -243,11 +234,6 @@ function createTab(filePath, content = '', langExt = null) {
     scrollPos: 0
   };
   return tab;
-}
-
-function getTabName(filePath) {
-  if (!filePath) return 'untitled.txt';
-  return filePath.split(/[\\/]/).pop();
 }
 
 function renderTabs() {
@@ -1049,69 +1035,6 @@ function insertWritingText(text) {
 
 // Markdown Preview functionality
 // Optimized markdown parser with caching
-let markdownCache = new Map();
-
-function parseMarkdown(text) {
-  // Check cache first
-  if (markdownCache.has(text)) {
-    return markdownCache.get(text);
-  }
-
-  // Escape raw HTML before processing so injected tags can't execute
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-
-  let html = escaped
-    // Headers (most specific first)
-    .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    // Bold and italic (more specific first)
-    .replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-    // Code blocks (before inline code)
-    .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
-    // Inline code
-    .replace(/`([^`\n]+)`/gim, '<code>$1</code>')
-    // Links — block javascript:/data: and enforce noopener
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, (_, t, u) => {
-      const safe = /^javascript:/i.test(u) || /^data:/i.test(u) ? '#' : u;
-      return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${t}</a>`;
-    })
-    // Lists (improved)
-    .replace(/^\* (.+)$/gim, '<li>$1</li>')
-    .replace(/^- (.+)$/gim, '<li>$1</li>')
-    .replace(/^(\d+)\. (.+)$/gim, '<li>$2</li>')
-    // Wrap consecutive list items
-    .replace(/(<li>.*?<\/li>)(\s*<li>.*?<\/li>)*/gim, '<ul>$&</ul>')
-    // Blockquotes
-    .replace(/^> (.+)$/gim, '<blockquote>$1</blockquote>')
-    // Horizontal rules
-    .replace(/^---$/gim, '<hr>')
-    // Line breaks (preserve paragraphs)
-    .replace(/\n\n/gim, '</p><p>')
-    .replace(/\n/gim, '<br>');
-
-  // Wrap in paragraphs
-  html = '<p>' + html + '</p>';
-
-  // Clean up empty paragraphs
-  html = html.replace(/<p><\/p>/gim, '').replace(/<p><br><\/p>/gim, '');
-
-  // Cache the result (limit cache size)
-  if (markdownCache.size > 50) {
-    markdownCache.clear();
-  }
-  markdownCache.set(text, html);
-
-  return html;
-}
-
 function updateMarkdownPreview() {
   const previewContent = document.getElementById('previewContent');
   const previewPane = document.getElementById('markdownPreviewPane');
@@ -1436,25 +1359,6 @@ async function updateGitInfo() {
 const term = document.getElementById('terminal'), termOut = document.getElementById('termOut'), termIn = document.getElementById('termIn')
 
 // ===== Terminal color engine =====
-function _termEsc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
-
-function _termColorizeAnsi(raw) {
-  const C = {'30':'#555','31':'#f87171','32':'#4ade80','33':'#fbbf24','34':'#60a5fa','35':'#c084fc','36':'#34d399','37':'#d1d5db','90':'#6b7280','91':'#fca5a5','92':'#86efac','93':'#fde68a','94':'#93c5fd','95':'#d8b4fe','96':'#6ee7b7','97':'#f9fafb'}
-  let out = '', depth = 0
-  for (const part of raw.split(/(\x1b\[[0-9;]*m)/)) {
-    const m = part.match(/^\x1b\[([0-9;]*)m$/)
-    if (m) {
-      for (const code of (m[1]||'0').split(';')) {
-        if (!code||code==='0') { while(depth-->0) out+='</span>'; depth=0 }
-        else if (code==='1') { out+='<span style="font-weight:bold">'; depth++ }
-        else if (C[code]) { out+=`<span style="color:${C[code]}">`;  depth++ }
-      }
-    } else { out += _termEsc(part) }
-  }
-  while (depth-->0) out+='</span>'
-  return out
-}
-
 function _termColorize(raw) {
   if (!raw) return ''
   if (/\x1b\[/.test(raw)) return _termColorizeAnsi(raw)
@@ -1492,8 +1396,6 @@ function _termColorize(raw) {
     }
   })
 })()
-
-function normPath(p) { const parts = []; for (const seg of p.split('/')) { if (!seg || seg === '.') continue; if (seg === '..') { parts.pop(); continue } parts.push(seg) } const root = p.startsWith('/') ? '/' : ''; return root + parts.join('/') }
 
 async function initCwd() {
   try {
@@ -1820,18 +1722,6 @@ let bookmarks = JSON.parse(localStorage.getItem('kit.bookmarks') || '[]')
 function persistTabs() { localStorage.setItem('kit.tabs', JSON.stringify(browserTabs)); localStorage.setItem('kit.activeTab', activeTabId || '') }
 function persistBookmarks() { localStorage.setItem('kit.bookmarks', JSON.stringify(bookmarks)) }
 
-function toUrl(q) {
-  if (!q) return '';
-  let url = q.trim();
-  const looks = /^(https?:\/\/|file:\/\/|about:|chrome:\/\/|\w+\.[\w.-]+(?:\/|$))/i.test(url);
-  if (looks) {
-    if (!/^https?:\/\//i.test(url) && !/^file:|about:|chrome:/.test(url)) {
-      url = 'https://' + url;
-    }
-    return url;
-  }
-  return 'https://duckduckgo.com/?q=' + encodeURIComponent(url);
-}
 function getFaviconUrl(u) { try { const url = new URL(u); return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`; } catch (_) { return ''; } }
 
 function openInWebview(target) {

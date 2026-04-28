@@ -10,7 +10,8 @@
     "dev": "npm run build && electron .",
     "start": "electron .",
     "postinstall": "electron-builder install-app-deps",
-    "dist:mac": "npm run build:prod && electron-builder --mac --publish never"
+    "dist:mac": "npm run build:prod && electron-builder --mac --publish never",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "build": {
     "appId": "com.kit.workspace",
@@ -29,13 +30,23 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "target": [
-        { "target": "dmg", "arch": ["universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "linux": {
       "category": "Development",
       "target": [
-        { "target": "AppImage", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "dmg": {
@@ -52,7 +63,9 @@
   "devDependencies": {
     "electron": "^40.0.0",
     "electron-builder": "^26.8.1",
-    "esbuild": "^0.28.0"
+    "esbuild": "^0.28.0",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0"
   },
   "dependencies": {
     "@codemirror/commands": "latest",
