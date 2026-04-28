@@ -8,3 +8,14 @@ updates:
     ignore:
       - dependency-name: electron
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+    groups:
+      dev-tools:
+        patterns:
+          - "esbuild"
+          - "jest*"
+          - "electron-builder"
+      ai-runtime:
+        patterns:
+          - "@anthropic-ai/*"
+          - "openai"
+          - "nodemailer"
