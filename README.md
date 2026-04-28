@@ -2,7 +2,7 @@
   <img src="icons/kiticon-100.png" alt="Kit" width="80" />
 </p>
 
-# Kit ✦
+# Kit 🏵️
 
 **One window. Every tool you need. Nothing you don't.**
 
