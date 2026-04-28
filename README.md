@@ -243,7 +243,6 @@ npm start
 ```
 ~/.Kit/
 ├── projects/        agent-created projects
-├── notes/           text notes and documents
 ├── data/            data files and datasets
 ├── scratch/         quick experiments
 ├── boards/          whiteboard saves
