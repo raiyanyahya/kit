@@ -1359,21 +1359,6 @@ async function updateGitInfo() {
 const term = document.getElementById('terminal'), termOut = document.getElementById('termOut'), termIn = document.getElementById('termIn')
 
 // ===== Terminal color engine =====
-function _termColorize(raw) {
-  if (!raw) return ''
-  if (/\x1b\[/.test(raw)) return _termColorizeAnsi(raw)
-  return raw.split('\n').map(line => {
-    if (line.startsWith('$ '))             return `<span class="tc-cmd">${_termEsc(line)}</span>`
-    if (line.startsWith('! '))             return `<span class="tc-err">${_termEsc(line)}</span>`
-    if (line.startsWith('✓ '))            return `<span class="tc-ok">${_termEsc(line)}</span>`
-    if (line.startsWith('→ '))             return `<span class="tc-nav">${_termEsc(line)}</span>`
-    if (line.startsWith('[AI]'))           return `<span class="tc-ai">${_termEsc(line)}</span>`
-    if (line.startsWith('Definitions for')) return `<span class="tc-nav">${_termEsc(line)}</span>`
-    if (line.startsWith('Conversation cleared')) return `<span class="tc-dim">${_termEsc(line)}</span>`
-    if (/^(Saved to|Summarizing:|No text|No definition)/.test(line)) return `<span class="tc-dim">${_termEsc(line)}</span>`
-    return _termEsc(line)
-  }).join('\n')
-}
 
 // Patch termOut so every textContent write is colorized with no call-site changes
 ;(function patchTermOut() {

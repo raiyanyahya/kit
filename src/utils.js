@@ -30,6 +30,9 @@ export function _termColorize(raw) {
     if (line.startsWith('✓ '))             return `<span class="tc-ok">${_termEsc(line)}</span>`;
     if (line.startsWith('→ '))              return `<span class="tc-nav">${_termEsc(line)}</span>`;
     if (line.startsWith('[AI]'))            return `<span class="tc-ai">${_termEsc(line)}</span>`;
+    if (line.startsWith('Definitions for')) return `<span class="tc-nav">${_termEsc(line)}</span>`;
+    if (line.startsWith('Conversation cleared')) return `<span class="tc-dim">${_termEsc(line)}</span>`;
+    if (/^(Saved to|Summarizing:|No text|No definition)/.test(line)) return `<span class="tc-dim">${_termEsc(line)}</span>`;
     return _termEsc(line);
   }).join('\n');
 }
