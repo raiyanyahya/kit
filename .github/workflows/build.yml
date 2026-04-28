@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Compute next patch version
         id: bump
@@ -51,7 +51,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python 3.11 (node-gyp needs distutils)
         uses: actions/setup-python@v5
@@ -95,7 +95,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python 3.11 (node-gyp needs distutils)
         uses: actions/setup-python@v5
@@ -148,7 +148,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
-          name: Jack ${{ needs.prepare.outputs.tag }}
+          name: Kit ${{ needs.prepare.outputs.tag }}
           generate_release_notes: true
           files: artifacts/**/*
         env:
