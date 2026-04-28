@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, safeStorage, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, safeStorage, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
@@ -128,7 +128,7 @@ function createWindow(){
     width: 1100, height: 900, minWidth: 1100, minHeight: 700,
     frame: false, transparent: false, backgroundColor: '#ffffff',
     title: 'Kit',
-    icon: path.join(__dirname, '..', 'icons', 'kiticon-512.png'),
+    icon: nativeImage.createFromPath(path.join(__dirname, '..', 'icons', 'kiticon-512.png')),
     webPreferences: {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.cjs'),
@@ -138,6 +138,9 @@ function createWindow(){
     }
   })
   win.loadFile(path.join(__dirname, 'index.html'))
+  if (process.platform === 'linux') {
+    app.setIcon(nativeImage.createFromPath(path.join(__dirname, '..', 'icons', 'kiticon-512.png')));
+  }
 }
 app.whenReady().then(async () => {
   KEY_FILE = path.join(app.getPath('userData'), '.kitkey');
