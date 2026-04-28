@@ -8,6 +8,8 @@ Kit is a desktop workspace that replaces the chaos of juggling a code editor, br
 
 Stop switching apps. Start making things.
 
+![Kit workspace](MediaAssets/KitLanding.png)
+
 ---
 
 ## Why Kit?
