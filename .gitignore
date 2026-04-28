@@ -1,6 +1,7 @@
 node_modules/
 dist/
 out/
+coverage/
 src/renderer.bundle.js
 src/renderer.bundle.js.map
 .DS_Store
