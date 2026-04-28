@@ -19,29 +19,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Compute next patch version
+      - name: Read version from package.json
         id: bump
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get latest release tag, fall back to package.json version
-          LATEST=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
-          if [ -z "$LATEST" ]; then
-            LATEST="v$(node -p "require('./package.json').version")"
-          fi
-          echo "Latest tag: $LATEST"
-
-          # Strip leading 'v', split, increment patch
-          VERSION="${LATEST#v}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-          PATCH=$(echo "$VERSION" | cut -d. -f3)
-          NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-          NEW_TAG="v${NEW_VERSION}"
-
-          echo "New version: $NEW_VERSION"
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$NEW_TAG"         >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION"   >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}"    >> "$GITHUB_OUTPUT"
 
   # ── Step 2a: build macOS DMG ───────────────────────────────────────────────
   build-mac:
