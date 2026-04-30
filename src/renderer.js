@@ -1441,8 +1441,7 @@ async function openFileFromTerminal(pathLike) {
   if (st.isDir) { termOut.textContent += "! " + full + " is a directory.\n"; return }
   const res = await window.kit.readFile(full)
   if (!res.ok) { termOut.textContent += "! Read failed: " + res.error + "\n"; return }
-  currentFile = full; currentLangExt = pickLanguage(full.split('/').pop()); rebuildEditor(res.data)
-  dirty = false; dirtyDot.classList.remove('on'); updateStatus();
+  openFileInTab(full, res.data)
 }
 function commonPrefix(strings) { if (!strings.length) return ''; let p = strings[0]; for (let s of strings) { let i = 0; while (i < p.length && i < s.length && p[i] === s[i]) i++; p = p.slice(0, i); if (!p) break } return p }
 async function completePath(input) {
