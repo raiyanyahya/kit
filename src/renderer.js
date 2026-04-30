@@ -91,6 +91,8 @@ const _MODEL_GROUPS = [
 // ── Custom model picker ───────────────────────────────────────────────────────
 function _buildModelPicker(selectEl) {
   if (!selectEl) return;
+  const saved = localStorage.getItem('kitSelectedModel');
+  if (saved) selectEl.value = saved;
   const init = selectEl.value || 'gpt-5.4';
   selectEl.style.cssText = 'display:none!important';
   const compact = selectEl.classList.contains('agent-model-select');
@@ -123,6 +125,7 @@ function _buildModelPicker(selectEl) {
       if (active) item.classList.add('active');
       item.addEventListener('click', () => {
         selectEl.value = m.v;
+        try { localStorage.setItem('kitSelectedModel', m.v); } catch (_) {}
         selectEl.dispatchEvent(new Event('change'));
         _setTrigger(m.v);
         menu.querySelectorAll('.mpk-item').forEach(it => {
