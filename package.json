@@ -17,6 +17,7 @@
     "appId": "com.kit.workspace",
     "productName": "Kit",
     "icon": "icons/kiticon-512.png",
+    "afterPack": "./build/afterPack.cjs",
     "asar": true,
     "extraResources": [
       {
