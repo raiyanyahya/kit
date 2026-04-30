@@ -12,7 +12,18 @@ module.exports = async function afterPack(context) {
 
   const appOutDir = context.appOutDir;
   const execName = context.packager.executableName || 'kit';
+  const projectDir = context.packager.projectDir;
   const binaryPath = path.join(appOutDir, execName);
+
+  // Copy AppImage icon (.DirIcon) from project icons directory
+  try {
+    const iconSrc = path.join(projectDir, 'build', 'icons', 'png', '256x256.png');
+    const iconDest = path.join(appOutDir, '.DirIcon');
+    if (fs.existsSync(iconSrc)) {
+      fs.copyFileSync(iconSrc, iconDest);
+      console.log('[afterPack] copied .DirIcon for AppImage');
+    }
+  } catch (e) { console.warn('[afterPack] .DirIcon copy failed:', e.message); }
 
   if (!fs.existsSync(binaryPath)) {
     console.warn(`[afterPack] binary not found: ${binaryPath}`);

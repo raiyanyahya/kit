@@ -437,11 +437,19 @@ function markCurrentTabClean() {
 }
 
 function setTitle(n) { document.title = 'Kit — ' + (n || 'untitled.txt') + (dirty ? ' •' : '') }
+function sanitizeDisplayPath(p) {
+  if (!p) return '';
+  const m = p.match(/^\/tmp\/\.mount_[^/]+\/resources\/app\.asar\/(.*)/);
+  if (m) return 'Kit App » ' + m[1];
+  const asar = p.match(/\/app\.asar\/(.*)/);
+  if (asar) return 'App » ' + asar[1];
+  return p;
+}
 function updateStatus() {
   const name = currentFile ? currentFile.split(/[\\/]/).pop() : 'untitled.txt'
-  const dir = currentFile ? currentFile.slice(0, currentFile.length - name.length - 1) : (termCwd || '')
+  const rawDir = currentFile ? currentFile.slice(0, currentFile.length - name.length - 1) : (termCwd || '')
   fileInfo.textContent = name
-  pathInfo.textContent = dir
+  pathInfo.textContent = sanitizeDisplayPath(rawDir)
   setTitle(name)
 
   // Show/hide markdown preview button (only in editor mode)
