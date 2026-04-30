@@ -168,11 +168,19 @@ function selectedModel() {
 function showSpinner() { if (termSpinner) { termSpinner.classList.remove('hidden'); } }
 function hideSpinner() { if (termSpinner) { termSpinner.classList.add('hidden'); } }
 
-// Auto-scroll terminal when content changes
+// Auto-scroll terminal when content changes (debounced via rAF)
 (function () {
   const out = document.getElementById('termOut');
   if (!out) return;
-  const scrollToBottom = () => { out.scrollTop = out.scrollHeight; };
+  let scrollPending = false;
+  const scrollToBottom = () => {
+    if (scrollPending) return;
+    scrollPending = true;
+    requestAnimationFrame(() => {
+      out.scrollTop = out.scrollHeight;
+      scrollPending = false;
+    });
+  };
   const mo = new MutationObserver(scrollToBottom);
   mo.observe(out, { childList: true, characterData: true, subtree: true });
 })();
@@ -620,7 +628,7 @@ window.addEventListener('keydown', (e) => {
     }
   }
 
-  // Close tab (Cmd+W / Ctrl+W) - only in editor mode
+  // Whiteboard Mode (Cmd+W / Ctrl+W) - only in editor mode, no shift
   if (meta && e.key.toLowerCase() === 'w' && !e.shiftKey) {
     const isEditorMode = !document.body.classList.contains('browser-mode') &&
       !document.body.classList.contains('email-mode') &&
@@ -628,9 +636,13 @@ window.addEventListener('keydown', (e) => {
       !document.body.classList.contains('whiteboard-mode') &&
       !document.body.classList.contains('stairs-mode') &&
       !document.body.classList.contains('calendar-mode');
-    if (isEditorMode && activeTabIndex >= 0) {
+    if (isEditorMode) {
       e.preventDefault();
-      closeEditorTab(activeTabIndex);
+      if (activeTabIndex >= 0 && openTabs.length > 1) {
+        closeEditorTab(activeTabIndex);
+      } else {
+        setWhiteboardMode(true);
+      }
     }
   }
 
@@ -2407,7 +2419,9 @@ document.getElementById('browserSummarizeBtn')?.addEventListener('click', async 
   showSpinner();
   try {
     const system = 'You are a helpful assistant. Summarize the following webpage content clearly and concisely, highlighting the key points.';
-    const input = `URL: ${url}\nTitle: ${title || ''}\n\nContent:\n${text.substring(0, 12000)}`;
+    const maxLen = 32000;
+    const truncated = text.length > maxLen ? text.substring(0, maxLen) + '\n\n[...content truncated]' : text;
+    const input = `URL: ${url}\nTitle: ${title || ''}\n\nContent:\n${truncated}`;
     const resp = await window.kit.aiRequest({ input, system, model: selectedModel(), previousResponseId: termAiPreviousId });
     if (resp?.ok) {
       if (resp.responseId) termAiPreviousId = resp.responseId;
@@ -2742,27 +2756,7 @@ ${content}`);
     }
   });
 
-  // 2) Delegated catch-all on document for anything that *looks* like a Find Error button
-  document.addEventListener('click', (e) => {
-    const cand = e.target.closest('button, a, [role="button"]');
-    if (!cand) return;
-    const id = (cand.id || '').toLowerCase();
-    const txt = (cand.textContent || '').toLowerCase();
-    const action = (cand.getAttribute('data-action') || cand.getAttribute('aria-label') || '').toLowerCase();
-    const looksFindError = (
-      ((/find/.test(id) && /(error|bug|issue|problem)/.test(id)) ||
-        (/check/.test(id) && /(error|bug|issue|problem)/.test(id))) ||
-      /find\s+error/.test(txt) || /check\s+for\s+errors?/.test(txt) || /\blint\b|\bvalidate\b|\bproblems?\b/.test(txt) ||
-      ((/find|check|lint|validate/.test(action)) && (/(error|bug|issue|problem)/.test(action)))
-    );
-    if (looksFindError) {
-      e.preventDefault();
-      e.stopPropagation();
-      runFindError(getEditorContent());
-    }
-  }, true);;
-
-  // 3) Programmatic hook (other code can dispatch this to trigger a detached window)
+  // 2) Programmatic hook (other code can dispatch this to trigger a detached window)
   window.addEventListener('ai:findError', (ev) => {
     const d = ev.detail || {};
     runFindError(d.content || getEditorContent());
@@ -3443,7 +3437,6 @@ function wbDeleteSelected() {
 function wbSnapshot() {
   wbHistory.push(JSON.stringify(wbElements));
   if (wbHistory.length > WB_HISTORY_LIMIT) wbHistory.shift();
-  if (wbFuture.length > WB_HISTORY_LIMIT) wbFuture.length = 0;
   wbFuture = [];
 }
 
@@ -4080,77 +4073,16 @@ async function handleCommand(value) {
 window.addEventListener('run-command', (e) => handleCommand(e.detail.value));
 // --- end dispatcher patch ---
 
-// --- Sidebar toggle wire-up (patched) ---
-document.addEventListener('DOMContentLoaded', () => {
-  const t = document.getElementById('toggleSidebar');
-  if (t) {
-    t.addEventListener('click', () => {
-      document.body.classList.toggle('sidebar-open');
-      try { localStorage.setItem('sidebarOpen', document.body.classList.contains('sidebar-open') ? '1' : '0'); } catch (e) { }
-    });
-    try { if (localStorage.getItem('sidebarOpen') === '1') document.body.classList.add('sidebar-open'); } catch (e) { }
-  }
-});
-// --- end sidebar toggle ---
-
-
-// --- sidebar toggle + load (patched) ---
+// Sidebar toggle persistence
 (function () {
-  const btn = document.getElementById('toggleSidebar');
-  const side = document.getElementById('sidebar');
-  async function refreshSidebar() {
-    try {
-      const cwd = (window.termCwd || (await window.kit?.homedir?.()) || '');
-      let resp = null;
-      if (window.kit?.list) {
-        resp = await window.kit.list(cwd);
-        // support both shapes: array or {ok,items}
-        const items = Array.isArray(resp) ? resp : (resp && resp.items ? resp.items : []);
-        renderSidebar(items, cwd);
-      } else if (window.kit?.fsList) {
-        resp = await window.kit.fsList(cwd);
-        const items = resp && resp.items ? resp.items : [];
-        renderSidebar(items, cwd);
-      }
-    } catch (_) { }
-  }
-  function renderSidebar(items, cwd) {
-    const el = document.getElementById('fileTree');
-    if (!el || !Array.isArray(items)) return;
-    el.innerHTML = '';
-    const ul = document.createElement('ul');
-    items.forEach(it => {
-      const li = document.createElement('li');
-      li.textContent = it.name || String(it);
-      li.className = it.dir ? 'dir' : 'file';
-      li.onclick = async () => {
-        try {
-          if (it.dir) {
-            window.termCwd = (cwd ? (cwd.replace(/\/$/, '') + '/' + it.name) : it.name);
-            await refreshSidebar();
-          } else {
-            const p = (cwd ? (cwd.replace(/\/$/, '') + '/' + it.name) : it.name);
-            const res = await (window.kit?.readFile ? window.kit.readFile(p) : null);
-            if (res && res.ok && window.setEditorText) window.setEditorText(res.data);
-          }
-        } catch (_) { }
-      };
-      ul.appendChild(li);
-    });
-    el.appendChild(ul);
-  }
-  if (btn) {
-    btn.addEventListener('click', async () => {
-      document.body.classList.toggle('sidebar-open');
-      try { localStorage.setItem('sidebarOpen', document.body.classList.contains('sidebar-open') ? '1' : '0'); } catch (_) { }
-      if (document.body.classList.contains('sidebar-open')) await refreshSidebar();
-    });
-    try { if (localStorage.getItem('sidebarOpen') === '1') { document.body.classList.add('sidebar-open'); refreshSidebar(); } } catch (_) { }
-  }
-  // expose for other modules
-  window.refreshSidebar = refreshSidebar;
+  const body = document.body;
+  try { if (localStorage.getItem('sidebarOpen') === '1') body.classList.add('sidebar-open'); } catch (_) {}
+  const observer = new MutationObserver(() => {
+    const open = body.classList.contains('sidebar-open');
+    try { localStorage.setItem('sidebarOpen', open ? '1' : '0'); } catch (_) {}
+  });
+  observer.observe(body, { attributes: true, attributeFilter: ['class'] });
 })();
-// --- end sidebar toggle patch ---
 
 
 
@@ -5776,7 +5708,9 @@ async function agentExecuteTool(name, argsObj) {
       case 'search_project': {
         const cwd = termCwd || '/';
         const q = argsObj.query.replace(/'/g, "'\\''");
-        const res = await window.kit.exec(cwd, `grep -rn '${q}' . 2>/dev/null | head -60`);
+        const excludes = '--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=.next --exclude-dir=__pycache__ --exclude-dir=target --exclude-dir=vendor --exclude-dir=.cache';
+        const includes = '--include=*.js --include=*.jsx --include=*.ts --include=*.tsx --include=*.py --include=*.rb --include=*.php --include=*.java --include=*.go --include=*.rs --include=*.c --include=*.cpp --include=*.h --include=*.hpp --include=*.cs --include=*.swift --include=*.kt --include=*.scala --include=*.html --include=*.css --include=*.scss --include=*.json --include=*.xml --include=*.yaml --include=*.yml --include=*.toml --include=*.md --include=*.txt --include=*.sh --include=*.bash --include=*.sql --include=*.graphql --include=*.vue --include=*.svelte';
+        const res = await window.kit.exec(cwd, `grep -rnI ${excludes} ${includes} '${q}' . 2>/dev/null | head -60`);
         return res.output || '(no matches)';
       }
       default:
@@ -6100,13 +6034,11 @@ document.getElementById('initRulesBtn')?.addEventListener('click', async () => {
 <!-- Anything else the agent should know -->
 `;
 
-  const tasks = [
-    window.kit.writeFile(kitrulesPath, '# Project-specific rules for Kit Agent\n'),
-    window.kit.writeFile(agentMdPath, agentMdTemplate),
-  ];
-  const results = await Promise.all(tasks);
-  if (results.some(r => !r?.ok)) {
-    alert('Failed to create rule files. Check permissions.');
+  const r1 = await window.kit.writeFile(kitrulesPath, '# Project-specific rules for Kit Agent\n');
+  const r2 = await window.kit.writeFile(agentMdPath, agentMdTemplate);
+  if (!r1?.ok || !r2?.ok) {
+    const failed = [!r1?.ok && '.kitrules', !r2?.ok && 'AGENT.md'].filter(Boolean).join(', ');
+    alert(`Failed to create: ${failed}. Check permissions.`);
     return;
   }
   // Open AGENT.md in editor

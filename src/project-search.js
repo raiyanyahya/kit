@@ -11,6 +11,9 @@ class ProjectSearch {
     this.fileCache = new Map();
     this.isIndexing = false;
     this.lastIndexedCwd = null;
+    this.fileCacheMaxSize = 1000;
+    this.fileCacheTotalSize = 0;
+    this.fileCacheMaxBytes = 16 * 1024 * 1024;
     
     // Folders to ignore during search
     this.ignoredFolders = [
@@ -91,15 +94,6 @@ class ProjectSearch {
         return;
       }
       
-      // Whiteboard Mode (Cmd+W / Ctrl+W)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
-        e.preventDefault();
-        if (window.setWhiteboardMode) {
-          window.setWhiteboardMode(!document.body.classList.contains('whiteboard-mode'));
-        }
-        return;
-      }
-      
       // Browser Mode (Cmd+B / Ctrl+B)
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         e.preventDefault();
@@ -149,6 +143,7 @@ class ProjectSearch {
       if (!cwd) return;
 
       this.fileCache.clear();
+      this.fileCacheTotalSize = 0;
       this.lastIndexedCwd = cwd;
       await this.indexDirectory(cwd);
     } catch (error) {
@@ -219,7 +214,19 @@ class ProjectSearch {
       
       const content = result.data;
       
-      // Store file content in cache
+      if (this.fileCache.size >= this.fileCacheMaxSize) {
+        this.fileCache.delete(this.fileCache.keys().next().value);
+      }
+      this.fileCacheTotalSize += content.length;
+      if (this.fileCacheTotalSize > this.fileCacheMaxBytes) {
+        while (this.fileCacheTotalSize > this.fileCacheMaxBytes * 0.8 && this.fileCache.size > 1) {
+          const firstKey = this.fileCache.keys().next().value;
+          const firstVal = this.fileCache.get(firstKey);
+          if (firstVal) this.fileCacheTotalSize -= firstVal.content.length;
+          this.fileCache.delete(firstKey);
+        }
+      }
+      
       this.fileCache.set(filePath, {
         content: content,
         lines: content.split('\n'),
