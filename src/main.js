@@ -11,11 +11,6 @@ import { simpleParser } from 'mailparser'
 // Using built-in fetch (Node.js 18+) instead of node-fetch
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// AppImages can't contain SUID chrome-sandbox; disable it on Linux
-if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('no-sandbox');
-}
-
 // IPC handlers for project search
 ipcMain.handle('readDirectory', async (event, dirPath) => {
   try {
