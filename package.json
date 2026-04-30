@@ -18,6 +18,12 @@
     "productName": "Kit",
     "icon": "icons/kiticon-512.png",
     "asar": true,
+    "extraResources": [
+      {
+        "from": "icons",
+        "to": "icons"
+      }
+    ],
     "files": [
       "src/**/*",
       "!src/renderer.js",

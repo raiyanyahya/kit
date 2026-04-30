@@ -11,6 +11,11 @@ import { simpleParser } from 'mailparser'
 // Using built-in fetch (Node.js 18+) instead of node-fetch
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// AppImages can't contain SUID chrome-sandbox; disable it on Linux
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox');
+}
+
 // IPC handlers for project search
 ipcMain.handle('readDirectory', async (event, dirPath) => {
   try {
@@ -128,7 +133,11 @@ function createWindow(){
     width: 1100, height: 900, minWidth: 1100, minHeight: 700,
     frame: false, transparent: false, backgroundColor: '#ffffff',
     title: 'Kit',
-    icon: nativeImage.createFromPath(path.join(__dirname, '..', 'icons', 'kiticon-512.png')),
+    icon: nativeImage.createFromPath(
+      app.isPackaged
+        ? path.join(process.resourcesPath, 'icons', 'kiticon-512.png')
+        : path.join(__dirname, '..', 'icons', 'kiticon-512.png')
+    ),
     webPreferences: {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.cjs'),
