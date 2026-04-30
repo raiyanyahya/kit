@@ -2650,7 +2650,6 @@ floatCopy?.addEventListener('click', () => {
 // ===== Summarize / Find Error → Detached detached window (post-AI) =====
 (function () {
   const byIds = [
-    'summarizeBtn', 'btnSummarize', 'aiSummarize', 'btnAIsummarize',
     'findErrorBtn', 'btnFindError', 'aiFindError', 'btnAIFindError'
   ];
   byIds.forEach(id => {
@@ -4187,15 +4186,6 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 // --- end sidebar toggle patch ---
 
-document.addEventListener('DOMContentLoaded', () => {
-  const sBtn = document.getElementById('aiSummarize');
-  if (sBtn) sBtn.addEventListener('click', async () => {
-    try {
-      const evt = new CustomEvent('ai-summarize');
-      window.dispatchEvent(evt);
-    } catch (_) { }
-  });
-});
 
 document.addEventListener('DOMContentLoaded', () => {
   const aiBtn = document.getElementById('aiToggle');
