@@ -2767,43 +2767,6 @@ ${content}`);
 })();
 
 
-// ===== aiCheck → Detached AI error check window =====
-; (function () {
-  const KIT = (window.kit || window.kitBridge);
-  const btn = document.getElementById('aiCheck');
-  if (!btn || btn.dataset._aiCheckHooked) return;
-  btn.dataset._aiCheckHooked = '1';
-
-  function getEditorContent() {
-    const textArea = document.querySelector('#editorWrap textarea, #editorWrap .cm-content, #editorWrap pre');
-    let selection = '';
-    if (window.getSelection && window.getSelection().toString()) {
-      selection = window.getSelection().toString();
-    }
-    return selection || textArea?.innerText || textArea?.value || '';
-  }
-
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault(); e.stopPropagation();
-    if (aiInFlight) return;
-    aiInFlight = true;
-    const content = getEditorContent();
-    const system = 'You are a strict code review assistant. Return concise, actionable errors and fixes.';
-    const input = `Identify likely bugs or errors and propose specific fixes. If relevant, include code snippets.\n\nCONTENT:\n${content}`;
-    try {
-      const res = await KIT?.aiRequest?.({ model: selectedModel(), system, input });
-      const title = res?.ok ? 'Check Errors' : 'Check Errors (Error)';
-      const html = res?.ok
-        ? `<div class="result"><pre>${escapeHtml(res.text || '')}</pre></div>`
-        : `<div class="result error"><pre>${escapeHtml(String(res?.error || 'Unknown error'))}</pre></div>`;
-      await KIT?.openResultWindow?.({ title, html });
-    } catch (err) {
-      await KIT?.openResultWindow?.({ title: 'Check Errors (Error)', html: `<div class="result error"><pre>${escapeHtml(String(err?.message || err))}</pre></div>` });
-    } finally {
-      aiInFlight = false;
-    }
-  });
-})();
 
 // Build a concise calendar context string for AI system prompts
 function buildCalendarContext() {
@@ -4187,22 +4150,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- end sidebar toggle patch ---
 
 
-document.addEventListener('DOMContentLoaded', () => {
-  const aiBtn = document.getElementById('aiToggle');
-  if (aiBtn) {
-    aiBtn.addEventListener('click', () => {
-      const on = aiBtn.classList.toggle('active');
-      aiBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-      try {
-        window.dispatchEvent(new CustomEvent('ai-toggle', { detail: { enabled: on } }));
-      } catch (_) { }
-      // If an existing function handles AI toggling, call it too.
-      try {
-        if (typeof toggleAI === 'function') toggleAI(on);
-      } catch (e) { /* ignore */ }
-    });
-  }
-});
 
 // ===== Settings Panel =====
 function loadSettings() {
