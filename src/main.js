@@ -497,9 +497,9 @@ async function handleClaudeAgentRequest(payload, apiKey) {
     messages = [{ role: 'user', content: String(payload.input || '') }];
   }
   const tools = (payload?.tools || []).filter(t => t.type === 'function').map(t => ({
-    name: t.function.name,
-    description: t.function.description || '',
-    input_schema: t.function.parameters || { type: 'object', properties: {} }
+    name: t.function?.name || t.name,
+    description: t.function?.description || t.description || '',
+    input_schema: t.function?.parameters || t.parameters || { type: 'object', properties: {} }
   }));
   const body = { model, max_tokens: 4096, messages, ...(payload?.system ? { system: payload.system } : {}), ...(tools.length ? { tools } : {}) };
   try {
@@ -530,7 +530,11 @@ ipcMain.handle('ai:request', async (_e, payload) => {
     return handleClaudeRequest(payload, ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY);
   }
   const key = OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (!key?.trim()) return { ok: false, error: 'No OpenAI API key set. Open AI Keys from the toolbar to add one.' };
+  if (!key?.trim()) {
+    const anthropicKey = ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+    if (anthropicKey?.trim()) return handleClaudeRequest({ ...payload, model: 'claude-sonnet-4-6' }, anthropicKey);
+    return { ok: false, error: 'No API key set. Open AI Keys from the toolbar to add one.' };
+  }
   return handleAIRequest(payload, key);
 });
 
