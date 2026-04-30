@@ -8,3 +8,5 @@ src/renderer.bundle.js.map
 *.log
 .claude/
 .vscode/
+.env
+.env.*
