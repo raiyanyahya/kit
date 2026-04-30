@@ -44,7 +44,7 @@
     },
     "linux": {
       "category": "Development",
-      "icon": "build/icons/png",
+      "icon": "build/icons/png/256x256.png",
       "executableArgs": [
         "--no-sandbox"
       ],
@@ -98,7 +98,6 @@
     "@codemirror/view": "6.41.1",
     "imapflow": "^1.2.10",
     "mailparser": "^3.9.3",
-    "node-fetch": "^3.3.2",
     "node-pty": "^1.0.0",
     "nodemailer": "^8.0.7",
     "openai": "^6.35.0"

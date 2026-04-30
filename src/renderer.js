@@ -27,10 +27,9 @@ import { toml as tomlLegacy } from '@codemirror/legacy-modes/mode/toml'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { _termEsc, _termColorize, _termColorizeAnsi, fuzzyMatch, normPath, getTabName, toUrl, _providerFor, parseMarkdown } from './utils.js'
 
-const $ = s => document.querySelector(s)
-
 // Lucide icon factory — all icons share Lucide's 24×24 coordinate space
 // so they look identical to Cursor, VS Code and every modern dev tool.
+const $ = s => document.querySelector(s)
 const _ico = (w, h, inner, cls = '') =>
   `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 24 24" width="${w}" height="${h}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`
 
@@ -168,11 +167,19 @@ function selectedModel() {
 function showSpinner() { if (termSpinner) { termSpinner.classList.remove('hidden'); } }
 function hideSpinner() { if (termSpinner) { termSpinner.classList.add('hidden'); } }
 
-// Auto-scroll terminal when content changes
+// Auto-scroll terminal when content changes (debounced via rAF)
 (function () {
   const out = document.getElementById('termOut');
   if (!out) return;
-  const scrollToBottom = () => { out.scrollTop = out.scrollHeight; };
+  let scrollPending = false;
+  const scrollToBottom = () => {
+    if (scrollPending) return;
+    scrollPending = true;
+    requestAnimationFrame(() => {
+      out.scrollTop = out.scrollHeight;
+      scrollPending = false;
+    });
+  };
   const mo = new MutationObserver(scrollToBottom);
   mo.observe(out, { childList: true, characterData: true, subtree: true });
 })();
@@ -185,10 +192,16 @@ function updateSideHeaderToCwd() {
     const dir = termCwd || '';
     if (dir) {
       const name = (dir.split(/[/\\]/).filter(Boolean).pop()) || 'Current';
-      el.innerHTML = `${ICON.folder} `;
-      el.append(name);
+      el.replaceChildren();
+      el.insertAdjacentHTML('beforeend', ICON.folder);
+      const textNode = document.createTextNode(' ' + name);
+      el.appendChild(textNode);
     } else {
-      el.innerHTML = `${ICON.folder} Current`;
+      el.innerHTML = '';
+      el.insertAdjacentHTML('beforeend', ICON.folder);
+      const span = document.createElement('span');
+      span.textContent = 'Current';
+      el.appendChild(span);
     }
   } catch (_) { }
   checkAgentRules(termCwd);
@@ -620,7 +633,7 @@ window.addEventListener('keydown', (e) => {
     }
   }
 
-  // Close tab (Cmd+W / Ctrl+W) - only in editor mode
+  // Whiteboard Mode (Cmd+W / Ctrl+W) - only in editor mode, no shift
   if (meta && e.key.toLowerCase() === 'w' && !e.shiftKey) {
     const isEditorMode = !document.body.classList.contains('browser-mode') &&
       !document.body.classList.contains('email-mode') &&
@@ -628,9 +641,13 @@ window.addEventListener('keydown', (e) => {
       !document.body.classList.contains('whiteboard-mode') &&
       !document.body.classList.contains('stairs-mode') &&
       !document.body.classList.contains('calendar-mode');
-    if (isEditorMode && activeTabIndex >= 0) {
+    if (isEditorMode) {
       e.preventDefault();
-      closeEditorTab(activeTabIndex);
+      if (activeTabIndex >= 0 && openTabs.length > 1) {
+        closeEditorTab(activeTabIndex);
+      } else {
+        setWhiteboardMode(true);
+      }
     }
   }
 
@@ -1035,15 +1052,16 @@ document.getElementById('highlightToolbar')?.addEventListener('click', () => {
   insertWritingText('==highlighted text==');
 })
 
+let _writingEditorView = null;
+function setWritingEditorView(view) { _writingEditorView = view; }
+
 function insertWritingText(text) {
-  const writingEditor = document.querySelector('.writing-editor .cm-content');
-  if (writingEditor && writingEditor.cmView) {
-    const view = writingEditor.cmView;
-    const pos = view.state.selection.main.head;
-    view.dispatch({
+  if (_writingEditorView) {
+    const pos = _writingEditorView.state.selection.main.head;
+    _writingEditorView.dispatch({
       changes: { from: pos, insert: text }
     });
-    view.focus();
+    _writingEditorView.focus();
   }
 }
 
@@ -1366,7 +1384,9 @@ async function updateGitInfo() {
     let modified = 0, untracked = 0;
     for (const l of statusLines) { if (l.startsWith('??')) untracked++; else modified++; }
 
-    gitInfo.innerHTML = `<span style="vertical-align:-2px;margin-right:3px;opacity:.7">${ICON.gitBranch}</span>${branch} @ ${sha}${ahead || behind ? ` • ↑${ahead} ↓${behind}` : ''}${modified || untracked ? ` • Δ${modified} +${untracked}` : ''}`;
+    const branchEsc = escapeHtml(branch);
+    const shaEsc = escapeHtml(sha);
+    gitInfo.innerHTML = `<span style="vertical-align:-2px;margin-right:3px;opacity:.7">${ICON.gitBranch}</span>${branchEsc} @ ${shaEsc}${ahead || behind ? ` • ↑${ahead} ↓${behind}` : ''}${modified || untracked ? ` • Δ${modified} +${untracked}` : ''}`;
   } catch (_) { /* keep existing badge on transient errors */ }
 }
 
@@ -1953,12 +1973,12 @@ function renderBookmarks(filter = '') {
     return;
   }
 
-  bookmarksResults.innerHTML = filtered.map((b, idx) => `
-    <div class="search-result-item" data-url="${b.url}" data-index="${idx}">
+      bookmarksResults.innerHTML = filtered.map((b, idx) => `
+    <div class="search-result-item" data-url="${escapeHtml(b.url)}" data-index="${idx}">
       <div class="search-result-icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style="color:#f59e0b"><path d="M8 1l1.8 4h4.2l-3.4 2.5 1.3 4.1L8 9.5l-3.9 2.1 1.3-4.1L2 5h4.2L8 1z"/></svg></div>
       <div class="search-result-content">
-        <div class="search-result-title">${b.title}</div>
-        <div class="search-result-path">${b.url}</div>
+        <div class="search-result-title">${escapeHtml(b.title)}</div>
+        <div class="search-result-path">${escapeHtml(b.url)}</div>
       </div>
     </div>
   `).join('');
@@ -2407,7 +2427,9 @@ document.getElementById('browserSummarizeBtn')?.addEventListener('click', async 
   showSpinner();
   try {
     const system = 'You are a helpful assistant. Summarize the following webpage content clearly and concisely, highlighting the key points.';
-    const input = `URL: ${url}\nTitle: ${title || ''}\n\nContent:\n${text.substring(0, 12000)}`;
+    const maxLen = 32000;
+    const truncated = text.length > maxLen ? text.substring(0, maxLen) + '\n\n[...content truncated]' : text;
+    const input = `URL: ${url}\nTitle: ${title || ''}\n\nContent:\n${truncated}`;
     const resp = await window.kit.aiRequest({ input, system, model: selectedModel(), previousResponseId: termAiPreviousId });
     if (resp?.ok) {
       if (resp.responseId) termAiPreviousId = resp.responseId;
@@ -2742,27 +2764,7 @@ ${content}`);
     }
   });
 
-  // 2) Delegated catch-all on document for anything that *looks* like a Find Error button
-  document.addEventListener('click', (e) => {
-    const cand = e.target.closest('button, a, [role="button"]');
-    if (!cand) return;
-    const id = (cand.id || '').toLowerCase();
-    const txt = (cand.textContent || '').toLowerCase();
-    const action = (cand.getAttribute('data-action') || cand.getAttribute('aria-label') || '').toLowerCase();
-    const looksFindError = (
-      ((/find/.test(id) && /(error|bug|issue|problem)/.test(id)) ||
-        (/check/.test(id) && /(error|bug|issue|problem)/.test(id))) ||
-      /find\s+error/.test(txt) || /check\s+for\s+errors?/.test(txt) || /\blint\b|\bvalidate\b|\bproblems?\b/.test(txt) ||
-      ((/find|check|lint|validate/.test(action)) && (/(error|bug|issue|problem)/.test(action)))
-    );
-    if (looksFindError) {
-      e.preventDefault();
-      e.stopPropagation();
-      runFindError(getEditorContent());
-    }
-  }, true);;
-
-  // 3) Programmatic hook (other code can dispatch this to trigger a detached window)
+  // 2) Programmatic hook (other code can dispatch this to trigger a detached window)
   window.addEventListener('ai:findError', (ev) => {
     const d = ev.detail || {};
     runFindError(d.content || getEditorContent());
@@ -3443,7 +3445,6 @@ function wbDeleteSelected() {
 function wbSnapshot() {
   wbHistory.push(JSON.stringify(wbElements));
   if (wbHistory.length > WB_HISTORY_LIMIT) wbHistory.shift();
-  if (wbFuture.length > WB_HISTORY_LIMIT) wbFuture.length = 0;
   wbFuture = [];
 }
 
@@ -4080,77 +4081,16 @@ async function handleCommand(value) {
 window.addEventListener('run-command', (e) => handleCommand(e.detail.value));
 // --- end dispatcher patch ---
 
-// --- Sidebar toggle wire-up (patched) ---
-document.addEventListener('DOMContentLoaded', () => {
-  const t = document.getElementById('toggleSidebar');
-  if (t) {
-    t.addEventListener('click', () => {
-      document.body.classList.toggle('sidebar-open');
-      try { localStorage.setItem('sidebarOpen', document.body.classList.contains('sidebar-open') ? '1' : '0'); } catch (e) { }
-    });
-    try { if (localStorage.getItem('sidebarOpen') === '1') document.body.classList.add('sidebar-open'); } catch (e) { }
-  }
-});
-// --- end sidebar toggle ---
-
-
-// --- sidebar toggle + load (patched) ---
+// Sidebar toggle persistence
 (function () {
-  const btn = document.getElementById('toggleSidebar');
-  const side = document.getElementById('sidebar');
-  async function refreshSidebar() {
-    try {
-      const cwd = (window.termCwd || (await window.kit?.homedir?.()) || '');
-      let resp = null;
-      if (window.kit?.list) {
-        resp = await window.kit.list(cwd);
-        // support both shapes: array or {ok,items}
-        const items = Array.isArray(resp) ? resp : (resp && resp.items ? resp.items : []);
-        renderSidebar(items, cwd);
-      } else if (window.kit?.fsList) {
-        resp = await window.kit.fsList(cwd);
-        const items = resp && resp.items ? resp.items : [];
-        renderSidebar(items, cwd);
-      }
-    } catch (_) { }
-  }
-  function renderSidebar(items, cwd) {
-    const el = document.getElementById('fileTree');
-    if (!el || !Array.isArray(items)) return;
-    el.innerHTML = '';
-    const ul = document.createElement('ul');
-    items.forEach(it => {
-      const li = document.createElement('li');
-      li.textContent = it.name || String(it);
-      li.className = it.dir ? 'dir' : 'file';
-      li.onclick = async () => {
-        try {
-          if (it.dir) {
-            window.termCwd = (cwd ? (cwd.replace(/\/$/, '') + '/' + it.name) : it.name);
-            await refreshSidebar();
-          } else {
-            const p = (cwd ? (cwd.replace(/\/$/, '') + '/' + it.name) : it.name);
-            const res = await (window.kit?.readFile ? window.kit.readFile(p) : null);
-            if (res && res.ok && window.setEditorText) window.setEditorText(res.data);
-          }
-        } catch (_) { }
-      };
-      ul.appendChild(li);
-    });
-    el.appendChild(ul);
-  }
-  if (btn) {
-    btn.addEventListener('click', async () => {
-      document.body.classList.toggle('sidebar-open');
-      try { localStorage.setItem('sidebarOpen', document.body.classList.contains('sidebar-open') ? '1' : '0'); } catch (_) { }
-      if (document.body.classList.contains('sidebar-open')) await refreshSidebar();
-    });
-    try { if (localStorage.getItem('sidebarOpen') === '1') { document.body.classList.add('sidebar-open'); refreshSidebar(); } } catch (_) { }
-  }
-  // expose for other modules
-  window.refreshSidebar = refreshSidebar;
+  const body = document.body;
+  try { if (localStorage.getItem('sidebarOpen') === '1') body.classList.add('sidebar-open'); } catch (_) {}
+  const observer = new MutationObserver(() => {
+    const open = body.classList.contains('sidebar-open');
+    try { localStorage.setItem('sidebarOpen', open ? '1' : '0'); } catch (_) {}
+  });
+  observer.observe(body, { attributes: true, attributeFilter: ['class'] });
 })();
-// --- end sidebar toggle patch ---
 
 
 
@@ -5769,14 +5709,23 @@ async function agentExecuteTool(name, argsObj) {
         return res.items.map(i => (i.dir ? '[dir] ' : '      ') + i.name).join('\n') || '(empty)';
       }
       case 'run_command': {
+        const cmd = String(argsObj.command || '').trim();
+        const DANGEROUS = /\b(?:sudo|mkfs|fdisk|dd\s+if=|:(){|chmod\s+777|rm\s+-rf\s+\/|>[\s]*\/dev\/[hs]d|mkfifo|mknod|wget\s+\S+\s*-O|curl\s+\S+\s*\|?\s*(?:ba)?sh)\b/i;
+        if (DANGEROUS.test(cmd)) return 'Blocked: command matches dangerous pattern. Use a safer approach.';
+        if (cmd.includes('/dev/') || cmd.includes('/etc/passwd') || cmd.includes('/etc/shadow'))
+          return 'Blocked: access to system files is not allowed.';
         const cwd = termCwd || '/';
-        const res = await window.kit.exec(cwd, argsObj.command);
+        const res = await window.kit.exec(cwd, cmd);
         return res.output || '(no output)';
       }
       case 'search_project': {
         const cwd = termCwd || '/';
-        const q = argsObj.query.replace(/'/g, "'\\''");
-        const res = await window.kit.exec(cwd, `grep -rn '${q}' . 2>/dev/null | head -60`);
+        const rawQuery = String(argsObj.query || '');
+        const safeQuery = rawQuery.replace(/[.^$*+?()[{\\|]/g, '\\$&');
+        const q = safeQuery.replace(/'/g, "'\\''");
+        const excludes = '--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=.next --exclude-dir=__pycache__ --exclude-dir=target --exclude-dir=vendor --exclude-dir=.cache';
+        const includes = '--include=*.js --include=*.jsx --include=*.ts --include=*.tsx --include=*.py --include=*.rb --include=*.php --include=*.java --include=*.go --include=*.rs --include=*.c --include=*.cpp --include=*.h --include=*.hpp --include=*.cs --include=*.swift --include=*.kt --include=*.scala --include=*.html --include=*.css --include=*.scss --include=*.json --include=*.xml --include=*.yaml --include=*.yml --include=*.toml --include=*.md --include=*.txt --include=*.sh --include=*.bash --include=*.sql --include=*.graphql --include=*.vue --include=*.svelte';
+        const res = await window.kit.exec(cwd, `grep -rnI ${excludes} ${includes} -e '${q}' . 2>/dev/null | head -60`);
         return res.output || '(no matches)';
       }
       default:
@@ -6100,13 +6049,11 @@ document.getElementById('initRulesBtn')?.addEventListener('click', async () => {
 <!-- Anything else the agent should know -->
 `;
 
-  const tasks = [
-    window.kit.writeFile(kitrulesPath, '# Project-specific rules for Kit Agent\n'),
-    window.kit.writeFile(agentMdPath, agentMdTemplate),
-  ];
-  const results = await Promise.all(tasks);
-  if (results.some(r => !r?.ok)) {
-    alert('Failed to create rule files. Check permissions.');
+  const r1 = await window.kit.writeFile(kitrulesPath, '# Project-specific rules for Kit Agent\n');
+  const r2 = await window.kit.writeFile(agentMdPath, agentMdTemplate);
+  if (!r1?.ok || !r2?.ok) {
+    const failed = [!r1?.ok && '.kitrules', !r2?.ok && 'AGENT.md'].filter(Boolean).join(', ');
+    alert(`Failed to create: ${failed}. Check permissions.`);
     return;
   }
   // Open AGENT.md in editor

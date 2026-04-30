@@ -11,28 +11,6 @@ import { simpleParser } from 'mailparser'
 // Using built-in fetch (Node.js 18+) instead of node-fetch
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// IPC handlers for project search
-ipcMain.handle('readDirectory', async (event, dirPath) => {
-  try {
-    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    return entries.map(entry => ({
-      name: entry.name,
-      isDirectory: entry.isDirectory(),
-      isFile: entry.isFile()
-    }));
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('readFile', async (event, filePath) => {
-  try {
-    return await fs.promises.readFile(filePath, 'utf8');
-  } catch (error) {
-    throw error;
-  }
-});
-
 ipcMain.handle('getCwd', async () => {
   return process.cwd();
 });
@@ -69,6 +47,7 @@ ipcMain.handle('kit:saveBoard', async (_e, data) => {
 });
 
 ipcMain.handle('kit:captureBoard', async (_e, rect) => {
+  if (!win) return { ok: false, error: 'Window not ready' };
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     title: 'Save Whiteboard',
     defaultPath: 'whiteboard.png',
@@ -200,6 +179,7 @@ app.whenReady().then(async () => {
     }
   } catch (_) { /* no saved email config */ }
   registerLinuxDesktopEntry();
+  await loadPrismAssets();
   createMenu();
   createWindow();
 })
@@ -319,23 +299,25 @@ ipcMain.handle('ai:setKey', async (_e, key, provider = 'openai') => {
   const isAnthropic = provider === 'anthropic';
   if (isAnthropic) {
     ANTHROPIC_API_KEY = trimmed;
-    try {
-      if (ANTHROPIC_API_KEY && ANTHROPIC_KEY_FILE && safeStorage.isEncryptionAvailable()) {
-        await fs.promises.writeFile(ANTHROPIC_KEY_FILE, safeStorage.encryptString(ANTHROPIC_API_KEY));
-      } else if (ANTHROPIC_KEY_FILE) {
-        await fs.promises.unlink(ANTHROPIC_KEY_FILE).catch(() => {});
-      }
-    } catch (_) {}
-    return !!ANTHROPIC_API_KEY;
-  }
-  OPENAI_API_KEY = trimmed;
   try {
-    if (OPENAI_API_KEY && KEY_FILE && safeStorage.isEncryptionAvailable()) {
-      await fs.promises.writeFile(KEY_FILE, safeStorage.encryptString(OPENAI_API_KEY));
-    } else if (KEY_FILE) {
-      await fs.promises.unlink(KEY_FILE).catch(() => {});
+    if (ANTHROPIC_API_KEY && ANTHROPIC_KEY_FILE && safeStorage.isEncryptionAvailable()) {
+      await fs.promises.writeFile(ANTHROPIC_KEY_FILE, safeStorage.encryptString(ANTHROPIC_API_KEY));
+    } else if (ANTHROPIC_KEY_FILE) {
+      await fs.promises.unlink(ANTHROPIC_KEY_FILE).catch(() => {});
+      if (!ANTHROPIC_API_KEY) console.error('[kit] Failed to clear anthropic key file');
     }
-  } catch (_) {}
+  } catch (e) { console.error('[kit] Failed to persist anthropic key:', e?.message || e); }
+  return !!ANTHROPIC_API_KEY;
+}
+OPENAI_API_KEY = trimmed;
+try {
+  if (OPENAI_API_KEY && KEY_FILE && safeStorage.isEncryptionAvailable()) {
+    await fs.promises.writeFile(KEY_FILE, safeStorage.encryptString(OPENAI_API_KEY));
+  } else if (KEY_FILE) {
+    await fs.promises.unlink(KEY_FILE).catch(() => {});
+    if (!OPENAI_API_KEY) console.error('[kit] Failed to clear openai key file');
+  }
+} catch (e) { console.error('[kit] Failed to persist openai key:', e?.message || e); }
   return !!OPENAI_API_KEY;
 })
 
@@ -360,49 +342,46 @@ ipcMain.handle('ai:clearKey', async (_e, provider) => {
 async function handleAIRequest(payload, apiKey) {
     const model = payload?.model || 'gpt-5.4';
     const system = payload?.system || '';
-  let input = String(payload?.input || '');
-  
-  
-  const isCodeGeneration = /^(code|complete|explain|fix|test|convert|refactor|optimize|document|review)\s/i.test(input);
-
   let enhancedSystem = system;
 
   if (!enhancedSystem) {
     enhancedSystem = 'You are a helpful AI assistant.';
   }
-  
+
+  let input = payload?.input;
+  if (Array.isArray(payload?.messages)) {
+    const lastMsg = payload.messages[payload.messages.length - 1];
+    input = lastMsg?.content || '';
+    const sysMsg = payload.messages.find(m => m.role === 'system');
+    if (sysMsg?.content) enhancedSystem = sysMsg.content;
+  } else {
+    input = String(payload?.input || '');
+  }
+
+  const cmdLower = String(input).toLowerCase();
+  const isCodeGeneration = /^(code|complete|explain|fix|test|convert|refactor|optimize|document|review)\s/.test(cmdLower);
+
   if (isCodeGeneration) {
-    switch (true) {
-      case input.startsWith('code '):
-        enhancedSystem = 'You are an expert programmer. Generate clean, well-commented code based on the user\'s description. Include necessary imports and handle edge cases.';
-        break;
-      case input.startsWith('complete '):
-        enhancedSystem = 'You are a code completion assistant. Complete the given code logically and efficiently. Maintain consistent style and add helpful comments.';
-        break;
-      case input.startsWith('explain '):
-        enhancedSystem = 'You are a code explainer. Provide clear, detailed explanations of what the code does, how it works, and any important concepts involved.';
-        break;
-      case input.startsWith('fix '):
-        enhancedSystem = 'You are a debugging expert. Identify and fix bugs in the code. Explain what was wrong and why your solution works.';
-        break;
-      case input.startsWith('test '):
-        enhancedSystem = 'You are a testing expert. Generate comprehensive unit tests for the given code. Include edge cases and error scenarios.';
-        break;
-      case input.startsWith('convert '):
-        enhancedSystem = 'You are a code conversion expert. Convert the code to the requested language while maintaining functionality and best practices.';
-        break;
-      case input.startsWith('refactor '):
-        enhancedSystem = 'You are a refactoring expert. Improve code structure, readability, and maintainability while preserving functionality.';
-        break;
-      case input.startsWith('optimize '):
-        enhancedSystem = 'You are a performance optimization expert. Improve code efficiency, reduce complexity, and enhance performance.';
-        break;
-      case input.startsWith('document '):
-        enhancedSystem = 'You are a documentation expert. Generate clear, comprehensive documentation including usage examples and API references.';
-        break;
-      case input.startsWith('review '):
-        enhancedSystem = 'You are a senior code reviewer. Provide constructive feedback on code quality, potential issues, and improvement suggestions.';
-        break;
+    if (cmdLower.startsWith('code ')) {
+      enhancedSystem = 'You are an expert programmer. Generate clean, well-commented code based on the user\'s description. Include necessary imports and handle edge cases.';
+    } else if (cmdLower.startsWith('complete ')) {
+      enhancedSystem = 'You are a code completion assistant. Complete the given code logically and efficiently. Maintain consistent style and add helpful comments.';
+    } else if (cmdLower.startsWith('explain ')) {
+      enhancedSystem = 'You are a code explainer. Provide clear, detailed explanations of what the code does, how it works, and any important concepts involved.';
+    } else if (cmdLower.startsWith('fix ')) {
+      enhancedSystem = 'You are a debugging expert. Identify and fix bugs in the code. Explain what was wrong and why your solution works.';
+    } else if (cmdLower.startsWith('test ')) {
+      enhancedSystem = 'You are a testing expert. Generate comprehensive unit tests for the given code. Include edge cases and error scenarios.';
+    } else if (cmdLower.startsWith('convert ')) {
+      enhancedSystem = 'You are a code conversion expert. Convert the code to the requested language while maintaining functionality and best practices.';
+    } else if (cmdLower.startsWith('refactor ')) {
+      enhancedSystem = 'You are a refactoring expert. Improve code structure, readability, and maintainability while preserving functionality.';
+    } else if (cmdLower.startsWith('optimize ')) {
+      enhancedSystem = 'You are a performance optimization expert. Improve code efficiency, reduce complexity, and enhance performance.';
+    } else if (cmdLower.startsWith('document ')) {
+      enhancedSystem = 'You are a documentation expert. Generate clear, comprehensive documentation including usage examples and API references.';
+    } else if (cmdLower.startsWith('review ')) {
+      enhancedSystem = 'You are a senior code reviewer. Provide constructive feedback on code quality, potential issues, and improvement suggestions.';
     }
   }
 
@@ -515,7 +494,11 @@ async function handleClaudeAgentRequest(payload, apiKey) {
     const data = await res.json();
     const newId = `cs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     claudeSessions.set(newId, { messages, lastContent: data.content });
-    if (claudeSessions.size > 20) claudeSessions.delete(claudeSessions.keys().next().value);
+    if (claudeSessions.size > 20) {
+      const evicted = claudeSessions.keys().next().value;
+      console.warn(`[kit] Claude session cache full (${claudeSessions.size}), evicting oldest session: ${evicted}`);
+      claudeSessions.delete(evicted);
+    }
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '';
     const functionCalls = (data.content || []).filter(b => b.type === 'tool_use').map(b => ({ name: b.name, arguments: JSON.stringify(b.input), callId: b.id }));
     return { ok: true, text, functionCalls, responseId: newId };
@@ -564,6 +547,24 @@ ipcMain.handle('agent:request', async (_e, payload) => {
   } catch (err) { return { ok: false, error: err?.message || String(err) }; }
 });
 
+// Preload Prism assets at startup (bundled, no CDN dependency)
+let PRISM_CSS = '';
+let PRISM_JS = '';
+
+async function loadPrismAssets() {
+  try {
+    const prismDir = path.join(__dirname, 'prism');
+    PRISM_CSS = await fs.promises.readFile(path.join(prismDir, 'prism-tomorrow.min.css'), 'utf8');
+    const coreJS = await fs.promises.readFile(path.join(prismDir, 'prism.min.js'), 'utf8');
+    const langJS = [];
+    const langFiles = (await fs.promises.readdir(prismDir)).filter(f => f.startsWith('prism-') && f.endsWith('.min.js'));
+    for (const f of langFiles) {
+      try { langJS.push(await fs.promises.readFile(path.join(prismDir, f), 'utf8')); } catch (_) {}
+    }
+    PRISM_JS = coreJS + '\n' + langJS.join('\n');
+  } catch (_) { /* non-fatal: code will render without highlighting */ }
+}
+
 ipcMain.handle('win:open-result', async (_e, payload)=>{
   const html = (payload && payload.html) || '<pre>No content</pre>';
   const title = (payload && payload.title) || 'Result';
@@ -581,8 +582,9 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
   <html>
   <head>
     <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:;">
     <title>${title}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <style>${PRISM_CSS}</style>
     <style>
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; overflow: hidden; }
@@ -742,16 +744,7 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
     <div class="content" id="content"></div>
     <div class="success-msg" id="successMsg">Copied</div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ruby.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-php.min.js"></script>
+    <script>${PRISM_JS}</script>
     <script>
       const mode = '${mode}';
       const rawContent = ${JSON.stringify(html)};
@@ -828,9 +821,8 @@ function makeImapClient(imap) {
     auth: { user: imap.user, pass: imap.pass },
     logger: false,
     connectionTimeout: 30000,
-    greetingTimeout: 30000,
     socketTimeout: 60000,
-    tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' }
+    tls: { minVersion: 'TLSv1.2' }
   });
 }
 
@@ -871,7 +863,10 @@ ipcMain.handle('email:testConnection', async (_e, cfg) => {
   }
 });
 
+const VALID_EMAIL_FOLDERS = new Set(['INBOX', 'Sent', 'Drafts', 'Trash', 'Archive', 'Spam', 'Junk']);
+
 ipcMain.handle('email:fetchInbox', async (_e, folder = 'INBOX') => {
+  if (!VALID_EMAIL_FOLDERS.has(folder)) return { ok: false, error: `Unknown folder: ${folder}` };
   if (!emailConfig?.imap) return { ok: false, error: 'No email config' };
   const { imap } = emailConfig;
   const client = makeImapClient(imap);
@@ -972,7 +967,7 @@ ipcMain.handle('email:send', async (_e, opts) => {
     const transporter = createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.secure,
       ...(useStarttls ? { requireTLS: true } : {}),
-      tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
+      tls: { minVersion: 'TLSv1.2' },
       auth: { user: imap.user, pass: imap.pass }
     });
     await transporter.sendMail({
