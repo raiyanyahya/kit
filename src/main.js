@@ -128,7 +128,11 @@ function createWindow(){
     width: 1100, height: 900, minWidth: 1100, minHeight: 700,
     frame: false, transparent: false, backgroundColor: '#ffffff',
     title: 'Kit',
-    icon: nativeImage.createFromPath(path.join(__dirname, '..', 'icons', 'kiticon-512.png').replace(/\\/g, '\\\\')),
+    icon: nativeImage.createFromPath(
+      app.isPackaged
+        ? path.join(process.resourcesPath, 'icons', 'kiticon-512.png')
+        : path.join(__dirname, '..', 'icons', 'kiticon-512.png')
+    ),
     webPreferences: {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.cjs'),
@@ -139,6 +143,40 @@ function createWindow(){
   })
   win.loadFile(path.join(__dirname, 'index.html'))
 }
+// Register .desktop entry + icon so the AppImage shows the correct icon in
+// file managers and app launchers without requiring AppImageLauncher.
+// process.env.APPIMAGE is set by the AppImage runtime to the path of the
+// running AppImage — only present when actually launched from an AppImage.
+async function registerLinuxDesktopEntry() {
+  if (process.platform !== 'linux' || !app.isPackaged || !process.env.APPIMAGE) return;
+  try {
+    const home = os.homedir();
+    const iconDir  = path.join(home, '.local', 'share', 'icons', 'hicolor', '512x512', 'apps');
+    const desktopDir = path.join(home, '.local', 'share', 'applications');
+    const iconSrc  = path.join(process.resourcesPath, 'icons', 'kiticon-512.png');
+    const iconName = 'kit-workspace';
+
+    await fs.promises.mkdir(iconDir,    { recursive: true });
+    await fs.promises.mkdir(desktopDir, { recursive: true });
+    await fs.promises.copyFile(iconSrc, path.join(iconDir, `${iconName}.png`));
+
+    const desktop = [
+      '[Desktop Entry]',
+      'Name=Kit',
+      `Exec=${process.env.APPIMAGE} %U`,
+      `Icon=${iconName}`,
+      'Type=Application',
+      'Categories=Development;',
+      'StartupWMClass=kit',
+      'Terminal=false',
+    ].join('\n') + '\n';
+    await fs.promises.writeFile(path.join(desktopDir, `${iconName}.desktop`), desktop, 'utf8');
+
+    exec('update-desktop-database ~/.local/share/applications 2>/dev/null || true');
+    exec('gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor 2>/dev/null || true');
+  } catch (_) { /* non-fatal */ }
+}
+
 app.whenReady().then(async () => {
   KEY_FILE = path.join(app.getPath('userData'), '.kitkey');
   try {
@@ -161,6 +199,7 @@ app.whenReady().then(async () => {
       emailConfig = JSON.parse(safeStorage.decryptString(raw));
     }
   } catch (_) { /* no saved email config */ }
+  registerLinuxDesktopEntry();
   createMenu();
   createWindow();
 })
