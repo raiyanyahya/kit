@@ -441,7 +441,12 @@ async function handleClaudeRequest(payload, apiKey) {
   const model = payload?.model || 'claude-sonnet-4-6';
   const system = payload?.system || 'You are a helpful AI assistant.';
   const input = String(payload?.input || '');
-  const body = { model, max_tokens: 8192, system, messages: [{ role: 'user', content: input }] };
+  const supportsWebSearch = payload?.webSearch !== false;
+  const body = {
+    model, max_tokens: 8192, system,
+    messages: [{ role: 'user', content: input }],
+    ...(supportsWebSearch ? { tools: [{ type: 'web_search_20250305', name: 'web_search' }] } : {})
+  };
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -453,7 +458,7 @@ async function handleClaudeRequest(payload, apiKey) {
       return { ok: false, error: e?.error?.message || `HTTP ${res.status}` };
     }
     const data = await res.json();
-    const text = data?.content?.[0]?.text || '';
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '';
     return { ok: !!text, text, citations: [], searchQueries: [], responseId: data.id };
   } catch (err) { return { ok: false, error: err?.message || String(err) }; }
 }
