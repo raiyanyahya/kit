@@ -393,7 +393,7 @@ async function handleAIRequest(payload, apiKey) {
 
   // Only include web_search when enabled. o1, o3, o4 and Claude models don't support tools.
   const supportsWebSearch = payload?.webSearch !== false && !/^o[134]/.test(model) && !/^claude-/.test(model);
-  const tools = supportsWebSearch ? [{ type: 'web_search' }] : undefined;
+  const tools = supportsWebSearch ? [{ type: 'web_search', search_context_size: 'medium' }] : undefined;
 
   try {
     const client = new OpenAI({ apiKey })
@@ -402,6 +402,7 @@ async function handleAIRequest(payload, apiKey) {
       instructions: enhancedSystem || undefined,
       input,
       ...(tools ? { tools } : {}),
+      ...(tools ? { include: ['web_search_call.action.sources'] } : {}),
       ...(isReasoningModel ? {} : { temperature }),
       ...(payload?.previousResponseId ? { previous_response_id: payload.previousResponseId } : {})
     })
@@ -410,12 +411,17 @@ async function handleAIRequest(payload, apiKey) {
 
     // Extract url_citation annotations (OpenAI requires these to be displayed)
     const citations = [];
-    // Extract web_search_call queries to surface in UI
     const searchQueries = [];
+    const sources = [];
     for (const item of response?.output || []) {
       if (item.type === 'web_search_call') {
         const q = item.action?.query || item.query;
         if (q) searchQueries.push(q);
+        if (item.action?.sources) {
+          for (const src of item.action.sources) {
+            sources.push({ title: src.title || '', url: src.url || '' });
+          }
+        }
       }
       if (item.type === 'message') {
         for (const c of item.content || []) {
@@ -428,7 +434,7 @@ async function handleAIRequest(payload, apiKey) {
       }
     }
 
-    return { ok: !!text, text, citations, searchQueries, responseId: response.id }
+    return { ok: !!text, text, citations, searchQueries, sources, responseId: response.id }
   } catch (err) {
     return { ok: false, error: err?.message || String(err) }
   }
@@ -459,7 +465,7 @@ async function handleClaudeRequest(payload, apiKey) {
     }
     const data = await res.json();
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '';
-    return { ok: !!text, text, citations: [], searchQueries: [], responseId: data.id };
+    return { ok: !!text, text: text || (data?.stop_reason === 'tool_use' ? '[Claude used web search — see full response]' : ''), citations: [], searchQueries: [], responseId: data.id };
   } catch (err) { return { ok: false, error: err?.message || String(err) }; }
 }
 

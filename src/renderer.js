@@ -853,6 +853,9 @@ async function aiTask(prompt) {
     if (resp.ok && resp.citations?.length) {
       aiOut += '\n\nSources:\n' + resp.citations.map(c => `  ${c.title}\n  ${c.url}`).join('\n');
     }
+    if (resp.ok && resp.sources?.length) {
+      aiOut += '\n\nAll sources:\n' + resp.sources.map(s => `  ${s.url}`).join('\n');
+    }
     termOut.textContent += aiOut + "\n";
     termOut.scrollTop = termOut.scrollHeight
   } finally {
@@ -2987,6 +2990,9 @@ Use the page content to answer questions about what the user is reading.${canSea
       }
       if (resp.citations?.length) {
         aiOut += '\n\nSources:\n' + resp.citations.map(c => `  ${c.title}\n  ${c.url}`).join('\n');
+      }
+      if (resp.sources?.length) {
+        aiOut += '\n\nAll sources:\n' + resp.sources.map(s => `  ${s.url}`).join('\n');
       }
     }
     out.textContent += aiOut + "\n";
