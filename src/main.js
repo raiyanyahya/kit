@@ -448,10 +448,16 @@ async function handleClaudeRequest(payload, apiKey) {
   const system = payload?.system || 'You are a helpful AI assistant.';
   const input = String(payload?.input || '');
   const supportsWebSearch = payload?.webSearch !== false;
+  const tools = [];
+  if (supportsWebSearch) {
+    tools.push({ type: 'web_search_20250305', name: 'web_search' });
+    tools.push({ type: 'web_fetch_20250910', name: 'web_fetch' });
+  }
+  tools.push({ type: 'code_execution_20250825', name: 'code_execution' });
   const body = {
     model, max_tokens: 8192, system,
     messages: [{ role: 'user', content: input }],
-    ...(supportsWebSearch ? { tools: [{ type: 'web_search_20250305', name: 'web_search' }] } : {})
+    tools
   };
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -491,7 +497,12 @@ async function handleClaudeAgentRequest(payload, apiKey) {
     description: t.function?.description || t.description || '',
     input_schema: t.function?.parameters || t.parameters || { type: 'object', properties: {} }
   }));
-  const body = { model, max_tokens: 4096, messages, ...(payload?.system ? { system: payload.system } : {}), ...(tools.length ? { tools } : {}) };
+  tools.push({ type: 'code_execution_20250825', name: 'code_execution' });
+  if (payload?.webSearch !== false) {
+    tools.push({ type: 'web_search_20250305', name: 'web_search' });
+    tools.push({ type: 'web_fetch_20250910', name: 'web_fetch' });
+  }
+  const body = { model, max_tokens: 4096, messages, ...(payload?.system ? { system: payload.system } : {}), tools };
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
