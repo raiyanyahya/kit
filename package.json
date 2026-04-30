@@ -19,7 +19,7 @@
     "icon": "build/icons/png/512x512.png",
     "afterPack": "./build/afterPack.cjs",
     "asar": true,
-    "asarUnpack": ["icons/**/*"],
+    "extraResources": [{ "from": "icons", "to": "icons" }],
     "files": [
       "src/**/*",
       "!src/renderer.js",
