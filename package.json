@@ -16,7 +16,7 @@
   "build": {
     "appId": "com.kit.workspace",
     "productName": "Kit",
-    "icon": "icons/kiticon-512.png",
+    "icon": "build/icons/png/512x512.png",
     "afterPack": "./build/afterPack.cjs",
     "asar": true,
     "extraResources": [
@@ -36,6 +36,7 @@
       "category": "public.app-category.developertools",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "icon": "build/icons/mac/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -48,7 +49,7 @@
     },
     "linux": {
       "category": "Development",
-      "icon": "icons/kiticon-512.png",
+      "icon": "build/icons/png",
       "executableArgs": [
         "--no-sandbox"
       ],
@@ -63,14 +64,14 @@
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "icon": "icons/kiticon-100.png",
+      "icon": "build/icons/mac/icon.icns",
       "background": null,
       "window": {
         "width": 540,
         "height": 380
       }
     },
-    "compression": "maximum"
+    "compression": "normal"
   },
   "devDependencies": {
     "electron": "^40.0.0",
