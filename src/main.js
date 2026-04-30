@@ -754,7 +754,7 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-php.min.js"></script>
     <script>
       const mode = '${mode}';
-      const rawContent = \`${html.replace(/`/g, '\\`')}\`;
+      const rawContent = ${JSON.stringify(html)};
       const contentEl = document.getElementById('content');
       let codeText = '';
 
