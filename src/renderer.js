@@ -27,10 +27,9 @@ import { toml as tomlLegacy } from '@codemirror/legacy-modes/mode/toml'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { _termEsc, _termColorize, _termColorizeAnsi, fuzzyMatch, normPath, getTabName, toUrl, _providerFor, parseMarkdown } from './utils.js'
 
-const $ = s => document.querySelector(s)
-
 // Lucide icon factory — all icons share Lucide's 24×24 coordinate space
 // so they look identical to Cursor, VS Code and every modern dev tool.
+const $ = s => document.querySelector(s)
 const _ico = (w, h, inner, cls = '') =>
   `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 24 24" width="${w}" height="${h}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`
 
@@ -193,10 +192,16 @@ function updateSideHeaderToCwd() {
     const dir = termCwd || '';
     if (dir) {
       const name = (dir.split(/[/\\]/).filter(Boolean).pop()) || 'Current';
-      el.innerHTML = `${ICON.folder} `;
-      el.append(name);
+      el.replaceChildren();
+      el.insertAdjacentHTML('beforeend', ICON.folder);
+      const textNode = document.createTextNode(' ' + name);
+      el.appendChild(textNode);
     } else {
-      el.innerHTML = `${ICON.folder} Current`;
+      el.innerHTML = '';
+      el.insertAdjacentHTML('beforeend', ICON.folder);
+      const span = document.createElement('span');
+      span.textContent = 'Current';
+      el.appendChild(span);
     }
   } catch (_) { }
   checkAgentRules(termCwd);
@@ -1047,15 +1052,16 @@ document.getElementById('highlightToolbar')?.addEventListener('click', () => {
   insertWritingText('==highlighted text==');
 })
 
+let _writingEditorView = null;
+function setWritingEditorView(view) { _writingEditorView = view; }
+
 function insertWritingText(text) {
-  const writingEditor = document.querySelector('.writing-editor .cm-content');
-  if (writingEditor && writingEditor.cmView) {
-    const view = writingEditor.cmView;
-    const pos = view.state.selection.main.head;
-    view.dispatch({
+  if (_writingEditorView) {
+    const pos = _writingEditorView.state.selection.main.head;
+    _writingEditorView.dispatch({
       changes: { from: pos, insert: text }
     });
-    view.focus();
+    _writingEditorView.focus();
   }
 }
 
@@ -1378,7 +1384,9 @@ async function updateGitInfo() {
     let modified = 0, untracked = 0;
     for (const l of statusLines) { if (l.startsWith('??')) untracked++; else modified++; }
 
-    gitInfo.innerHTML = `<span style="vertical-align:-2px;margin-right:3px;opacity:.7">${ICON.gitBranch}</span>${branch} @ ${sha}${ahead || behind ? ` • ↑${ahead} ↓${behind}` : ''}${modified || untracked ? ` • Δ${modified} +${untracked}` : ''}`;
+    const branchEsc = escapeHtml(branch);
+    const shaEsc = escapeHtml(sha);
+    gitInfo.innerHTML = `<span style="vertical-align:-2px;margin-right:3px;opacity:.7">${ICON.gitBranch}</span>${branchEsc} @ ${shaEsc}${ahead || behind ? ` • ↑${ahead} ↓${behind}` : ''}${modified || untracked ? ` • Δ${modified} +${untracked}` : ''}`;
   } catch (_) { /* keep existing badge on transient errors */ }
 }
 
@@ -1965,12 +1973,12 @@ function renderBookmarks(filter = '') {
     return;
   }
 
-  bookmarksResults.innerHTML = filtered.map((b, idx) => `
-    <div class="search-result-item" data-url="${b.url}" data-index="${idx}">
+      bookmarksResults.innerHTML = filtered.map((b, idx) => `
+    <div class="search-result-item" data-url="${escapeHtml(b.url)}" data-index="${idx}">
       <div class="search-result-icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style="color:#f59e0b"><path d="M8 1l1.8 4h4.2l-3.4 2.5 1.3 4.1L8 9.5l-3.9 2.1 1.3-4.1L2 5h4.2L8 1z"/></svg></div>
       <div class="search-result-content">
-        <div class="search-result-title">${b.title}</div>
-        <div class="search-result-path">${b.url}</div>
+        <div class="search-result-title">${escapeHtml(b.title)}</div>
+        <div class="search-result-path">${escapeHtml(b.url)}</div>
       </div>
     </div>
   `).join('');
@@ -5701,16 +5709,23 @@ async function agentExecuteTool(name, argsObj) {
         return res.items.map(i => (i.dir ? '[dir] ' : '      ') + i.name).join('\n') || '(empty)';
       }
       case 'run_command': {
+        const cmd = String(argsObj.command || '').trim();
+        const DANGEROUS = /\b(?:sudo|mkfs|fdisk|dd\s+if=|:(){|chmod\s+777|rm\s+-rf\s+\/|>[\s]*\/dev\/[hs]d|mkfifo|mknod|wget\s+\S+\s*-O|curl\s+\S+\s*\|?\s*(?:ba)?sh)\b/i;
+        if (DANGEROUS.test(cmd)) return 'Blocked: command matches dangerous pattern. Use a safer approach.';
+        if (cmd.includes('/dev/') || cmd.includes('/etc/passwd') || cmd.includes('/etc/shadow'))
+          return 'Blocked: access to system files is not allowed.';
         const cwd = termCwd || '/';
-        const res = await window.kit.exec(cwd, argsObj.command);
+        const res = await window.kit.exec(cwd, cmd);
         return res.output || '(no output)';
       }
       case 'search_project': {
         const cwd = termCwd || '/';
-        const q = argsObj.query.replace(/'/g, "'\\''");
+        const rawQuery = String(argsObj.query || '');
+        const safeQuery = rawQuery.replace(/[.^$*+?()[{\\|]/g, '\\$&');
+        const q = safeQuery.replace(/'/g, "'\\''");
         const excludes = '--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=.next --exclude-dir=__pycache__ --exclude-dir=target --exclude-dir=vendor --exclude-dir=.cache';
         const includes = '--include=*.js --include=*.jsx --include=*.ts --include=*.tsx --include=*.py --include=*.rb --include=*.php --include=*.java --include=*.go --include=*.rs --include=*.c --include=*.cpp --include=*.h --include=*.hpp --include=*.cs --include=*.swift --include=*.kt --include=*.scala --include=*.html --include=*.css --include=*.scss --include=*.json --include=*.xml --include=*.yaml --include=*.yml --include=*.toml --include=*.md --include=*.txt --include=*.sh --include=*.bash --include=*.sql --include=*.graphql --include=*.vue --include=*.svelte';
-        const res = await window.kit.exec(cwd, `grep -rnI ${excludes} ${includes} '${q}' . 2>/dev/null | head -60`);
+        const res = await window.kit.exec(cwd, `grep -rnI ${excludes} ${includes} -e '${q}' . 2>/dev/null | head -60`);
         return res.output || '(no matches)';
       }
       default:

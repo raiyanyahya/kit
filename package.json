@@ -44,7 +44,7 @@
     },
     "linux": {
       "category": "Development",
-      "icon": "build/icons/png",
+      "icon": "build/icons/png/256x256.png",
       "executableArgs": [
         "--no-sandbox"
       ],

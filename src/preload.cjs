@@ -32,7 +32,6 @@ const api = {
   // Detached result window
   openResultWindow: (payload)=> ipcRenderer.invoke('win:open-result', payload),
   // --- Project Search ---
-  readDirectory: (dirPath)=> ipcRenderer.invoke('readDirectory', dirPath),
   getCwd: ()=> ipcRenderer.invoke('getCwd'),
   // --- Folder / Board Management ---
   ensureFolder: ()=> ipcRenderer.invoke('kit:ensureFolder'),

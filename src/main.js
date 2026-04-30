@@ -11,28 +11,6 @@ import { simpleParser } from 'mailparser'
 // Using built-in fetch (Node.js 18+) instead of node-fetch
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// IPC handlers for project search
-ipcMain.handle('readDirectory', async (event, dirPath) => {
-  try {
-    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    return entries.map(entry => ({
-      name: entry.name,
-      isDirectory: entry.isDirectory(),
-      isFile: entry.isFile()
-    }));
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('readFile', async (event, filePath) => {
-  try {
-    return await fs.promises.readFile(filePath, 'utf8');
-  } catch (error) {
-    throw error;
-  }
-});
-
 ipcMain.handle('getCwd', async () => {
   return process.cwd();
 });
@@ -69,6 +47,7 @@ ipcMain.handle('kit:saveBoard', async (_e, data) => {
 });
 
 ipcMain.handle('kit:captureBoard', async (_e, rect) => {
+  if (!win) return { ok: false, error: 'Window not ready' };
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     title: 'Save Whiteboard',
     defaultPath: 'whiteboard.png',
@@ -200,6 +179,7 @@ app.whenReady().then(async () => {
     }
   } catch (_) { /* no saved email config */ }
   registerLinuxDesktopEntry();
+  await loadPrismAssets();
   createMenu();
   createWindow();
 })
@@ -362,18 +342,25 @@ ipcMain.handle('ai:clearKey', async (_e, provider) => {
 async function handleAIRequest(payload, apiKey) {
     const model = payload?.model || 'gpt-5.4';
     const system = payload?.system || '';
-  let input = String(payload?.input || '');
-  
-  
-  const cmdLower = input.toLowerCase();
-  const isCodeGeneration = /^(code|complete|explain|fix|test|convert|refactor|optimize|document|review)\s/.test(cmdLower);
-
   let enhancedSystem = system;
 
   if (!enhancedSystem) {
     enhancedSystem = 'You are a helpful AI assistant.';
   }
-  
+
+  let input = payload?.input;
+  if (Array.isArray(payload?.messages)) {
+    const lastMsg = payload.messages[payload.messages.length - 1];
+    input = lastMsg?.content || '';
+    const sysMsg = payload.messages.find(m => m.role === 'system');
+    if (sysMsg?.content) enhancedSystem = sysMsg.content;
+  } else {
+    input = String(payload?.input || '');
+  }
+
+  const cmdLower = String(input).toLowerCase();
+  const isCodeGeneration = /^(code|complete|explain|fix|test|convert|refactor|optimize|document|review)\s/.test(cmdLower);
+
   if (isCodeGeneration) {
     if (cmdLower.startsWith('code ')) {
       enhancedSystem = 'You are an expert programmer. Generate clean, well-commented code based on the user\'s description. Include necessary imports and handle edge cases.';
@@ -560,6 +547,24 @@ ipcMain.handle('agent:request', async (_e, payload) => {
   } catch (err) { return { ok: false, error: err?.message || String(err) }; }
 });
 
+// Preload Prism assets at startup (bundled, no CDN dependency)
+let PRISM_CSS = '';
+let PRISM_JS = '';
+
+async function loadPrismAssets() {
+  try {
+    const prismDir = path.join(__dirname, 'prism');
+    PRISM_CSS = await fs.promises.readFile(path.join(prismDir, 'prism-tomorrow.min.css'), 'utf8');
+    const coreJS = await fs.promises.readFile(path.join(prismDir, 'prism.min.js'), 'utf8');
+    const langJS = [];
+    const langFiles = (await fs.promises.readdir(prismDir)).filter(f => f.startsWith('prism-') && f.endsWith('.min.js'));
+    for (const f of langFiles) {
+      try { langJS.push(await fs.promises.readFile(path.join(prismDir, f), 'utf8')); } catch (_) {}
+    }
+    PRISM_JS = coreJS + '\n' + langJS.join('\n');
+  } catch (_) { /* non-fatal: code will render without highlighting */ }
+}
+
 ipcMain.handle('win:open-result', async (_e, payload)=>{
   const html = (payload && payload.html) || '<pre>No content</pre>';
   const title = (payload && payload.title) || 'Result';
@@ -577,8 +582,9 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
   <html>
   <head>
     <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:;">
     <title>${title}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <style>${PRISM_CSS}</style>
     <style>
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; overflow: hidden; }
@@ -738,16 +744,7 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
     <div class="content" id="content"></div>
     <div class="success-msg" id="successMsg">Copied</div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ruby.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-php.min.js"></script>
+    <script>${PRISM_JS}</script>
     <script>
       const mode = '${mode}';
       const rawContent = ${JSON.stringify(html)};
@@ -825,7 +822,7 @@ function makeImapClient(imap) {
     logger: false,
     connectionTimeout: 30000,
     socketTimeout: 60000,
-    tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' }
+    tls: { minVersion: 'TLSv1.2' }
   });
 }
 
@@ -866,7 +863,10 @@ ipcMain.handle('email:testConnection', async (_e, cfg) => {
   }
 });
 
+const VALID_EMAIL_FOLDERS = new Set(['INBOX', 'Sent', 'Drafts', 'Trash', 'Archive', 'Spam', 'Junk']);
+
 ipcMain.handle('email:fetchInbox', async (_e, folder = 'INBOX') => {
+  if (!VALID_EMAIL_FOLDERS.has(folder)) return { ok: false, error: `Unknown folder: ${folder}` };
   if (!emailConfig?.imap) return { ok: false, error: 'No email config' };
   const { imap } = emailConfig;
   const client = makeImapClient(imap);
@@ -967,7 +967,7 @@ ipcMain.handle('email:send', async (_e, opts) => {
     const transporter = createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.secure,
       ...(useStarttls ? { requireTLS: true } : {}),
-      tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
+      tls: { minVersion: 'TLSv1.2' },
       auth: { user: imap.user, pass: imap.pass }
     });
     await transporter.sendMail({

@@ -13,17 +13,10 @@
   --terminal-input-bg: #f9fafb;
   --terminal-border: rgba(0,0,0,0.1);
 }
-@media (prefers-color-scheme: light){
-  :root{
-    --mini-btn-bg: #f3f4f6;
-    --mini-btn-fg: #111827;
-    --mini-btn-border: rgba(0,0,0,.25);
-  }
-  /* Force dark editor palette even if system is light but app is dark */
-  body.dark #editor, body.dark .cm-editor, body.dark .cm-scroller, body.dark .cm-content {
-    background: #0f1115 !important;
-    color: #fff !important;
-  }
+/* Force dark editor palette even if system is light but app is dark */
+body.dark #editor, body.dark .cm-editor, body.dark .cm-scroller, body.dark .cm-content {
+  background: #0f1115 !important;
+  color: #fff !important;
 }
 
 /* Common theme hooks your app might use */

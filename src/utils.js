@@ -97,8 +97,6 @@ export function parseMarkdown(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-  const BLOCK_TAGS = /<\/?(?:h[1-6]|pre|blockquote|hr|ul|ol|li|table|thead|tbody|tr|td|th|div|section|article|header|footer|nav|aside|main|figure|figcaption|details|summary|form|fieldset|legend|dl|dt|dd|address|p)(?:\s[^>]*)?>/gi;
-
   let html = escaped
     .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
