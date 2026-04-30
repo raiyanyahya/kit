@@ -128,11 +128,7 @@ function createWindow(){
     width: 1100, height: 900, minWidth: 1100, minHeight: 700,
     frame: false, transparent: false, backgroundColor: '#ffffff',
     title: 'Kit',
-    icon: nativeImage.createFromPath(
-      app.isPackaged
-        ? path.join(process.resourcesPath, 'icons', 'kiticon-512.png')
-        : path.join(__dirname, '..', 'icons', 'kiticon-512.png')
-    ),
+    icon: nativeImage.createFromPath(path.join(__dirname, '..', 'icons', 'kiticon-512.png').replace(/\\/g, '\\\\')),
     webPreferences: {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.cjs'),
