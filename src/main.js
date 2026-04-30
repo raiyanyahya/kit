@@ -391,9 +391,9 @@ async function handleAIRequest(payload, apiKey) {
   // Reasoning models (o1, o3, o4-mini, etc.) don't support temperature
   const isReasoningModel = /^o\d/.test(model);
 
-  // Only include web_search when enabled and model supports it (not o1)
-  const supportsWebSearch = payload?.webSearch !== false && !/^o1/.test(model);
-  const tools = supportsWebSearch ? [{ type: 'web_search_preview' }] : undefined;
+  // Only include web_search when enabled. o1, o3, o4 and Claude models don't support tools.
+  const supportsWebSearch = payload?.webSearch !== false && !/^o[134]/.test(model) && !/^claude-/.test(model);
+  const tools = supportsWebSearch ? [{ type: 'web_search' }] : undefined;
 
   try {
     const client = new OpenAI({ apiKey })
