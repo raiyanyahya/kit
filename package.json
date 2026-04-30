@@ -41,6 +41,8 @@
     },
     "linux": {
       "category": "Development",
+      "icon": "icons/kiticon-512.png",
+      "executableArgs": ["--no-sandbox"],
       "target": [
         {
           "target": "AppImage",
