@@ -319,23 +319,25 @@ ipcMain.handle('ai:setKey', async (_e, key, provider = 'openai') => {
   const isAnthropic = provider === 'anthropic';
   if (isAnthropic) {
     ANTHROPIC_API_KEY = trimmed;
-    try {
-      if (ANTHROPIC_API_KEY && ANTHROPIC_KEY_FILE && safeStorage.isEncryptionAvailable()) {
-        await fs.promises.writeFile(ANTHROPIC_KEY_FILE, safeStorage.encryptString(ANTHROPIC_API_KEY));
-      } else if (ANTHROPIC_KEY_FILE) {
-        await fs.promises.unlink(ANTHROPIC_KEY_FILE).catch(() => {});
-      }
-    } catch (_) {}
-    return !!ANTHROPIC_API_KEY;
-  }
-  OPENAI_API_KEY = trimmed;
   try {
-    if (OPENAI_API_KEY && KEY_FILE && safeStorage.isEncryptionAvailable()) {
-      await fs.promises.writeFile(KEY_FILE, safeStorage.encryptString(OPENAI_API_KEY));
-    } else if (KEY_FILE) {
-      await fs.promises.unlink(KEY_FILE).catch(() => {});
+    if (ANTHROPIC_API_KEY && ANTHROPIC_KEY_FILE && safeStorage.isEncryptionAvailable()) {
+      await fs.promises.writeFile(ANTHROPIC_KEY_FILE, safeStorage.encryptString(ANTHROPIC_API_KEY));
+    } else if (ANTHROPIC_KEY_FILE) {
+      await fs.promises.unlink(ANTHROPIC_KEY_FILE).catch(() => {});
+      if (!ANTHROPIC_API_KEY) console.error('[kit] Failed to clear anthropic key file');
     }
-  } catch (_) {}
+  } catch (e) { console.error('[kit] Failed to persist anthropic key:', e?.message || e); }
+  return !!ANTHROPIC_API_KEY;
+}
+OPENAI_API_KEY = trimmed;
+try {
+  if (OPENAI_API_KEY && KEY_FILE && safeStorage.isEncryptionAvailable()) {
+    await fs.promises.writeFile(KEY_FILE, safeStorage.encryptString(OPENAI_API_KEY));
+  } else if (KEY_FILE) {
+    await fs.promises.unlink(KEY_FILE).catch(() => {});
+    if (!OPENAI_API_KEY) console.error('[kit] Failed to clear openai key file');
+  }
+} catch (e) { console.error('[kit] Failed to persist openai key:', e?.message || e); }
   return !!OPENAI_API_KEY;
 })
 
@@ -363,7 +365,8 @@ async function handleAIRequest(payload, apiKey) {
   let input = String(payload?.input || '');
   
   
-  const isCodeGeneration = /^(code|complete|explain|fix|test|convert|refactor|optimize|document|review)\s/i.test(input);
+  const cmdLower = input.toLowerCase();
+  const isCodeGeneration = /^(code|complete|explain|fix|test|convert|refactor|optimize|document|review)\s/.test(cmdLower);
 
   let enhancedSystem = system;
 
@@ -372,37 +375,26 @@ async function handleAIRequest(payload, apiKey) {
   }
   
   if (isCodeGeneration) {
-    switch (true) {
-      case input.startsWith('code '):
-        enhancedSystem = 'You are an expert programmer. Generate clean, well-commented code based on the user\'s description. Include necessary imports and handle edge cases.';
-        break;
-      case input.startsWith('complete '):
-        enhancedSystem = 'You are a code completion assistant. Complete the given code logically and efficiently. Maintain consistent style and add helpful comments.';
-        break;
-      case input.startsWith('explain '):
-        enhancedSystem = 'You are a code explainer. Provide clear, detailed explanations of what the code does, how it works, and any important concepts involved.';
-        break;
-      case input.startsWith('fix '):
-        enhancedSystem = 'You are a debugging expert. Identify and fix bugs in the code. Explain what was wrong and why your solution works.';
-        break;
-      case input.startsWith('test '):
-        enhancedSystem = 'You are a testing expert. Generate comprehensive unit tests for the given code. Include edge cases and error scenarios.';
-        break;
-      case input.startsWith('convert '):
-        enhancedSystem = 'You are a code conversion expert. Convert the code to the requested language while maintaining functionality and best practices.';
-        break;
-      case input.startsWith('refactor '):
-        enhancedSystem = 'You are a refactoring expert. Improve code structure, readability, and maintainability while preserving functionality.';
-        break;
-      case input.startsWith('optimize '):
-        enhancedSystem = 'You are a performance optimization expert. Improve code efficiency, reduce complexity, and enhance performance.';
-        break;
-      case input.startsWith('document '):
-        enhancedSystem = 'You are a documentation expert. Generate clear, comprehensive documentation including usage examples and API references.';
-        break;
-      case input.startsWith('review '):
-        enhancedSystem = 'You are a senior code reviewer. Provide constructive feedback on code quality, potential issues, and improvement suggestions.';
-        break;
+    if (cmdLower.startsWith('code ')) {
+      enhancedSystem = 'You are an expert programmer. Generate clean, well-commented code based on the user\'s description. Include necessary imports and handle edge cases.';
+    } else if (cmdLower.startsWith('complete ')) {
+      enhancedSystem = 'You are a code completion assistant. Complete the given code logically and efficiently. Maintain consistent style and add helpful comments.';
+    } else if (cmdLower.startsWith('explain ')) {
+      enhancedSystem = 'You are a code explainer. Provide clear, detailed explanations of what the code does, how it works, and any important concepts involved.';
+    } else if (cmdLower.startsWith('fix ')) {
+      enhancedSystem = 'You are a debugging expert. Identify and fix bugs in the code. Explain what was wrong and why your solution works.';
+    } else if (cmdLower.startsWith('test ')) {
+      enhancedSystem = 'You are a testing expert. Generate comprehensive unit tests for the given code. Include edge cases and error scenarios.';
+    } else if (cmdLower.startsWith('convert ')) {
+      enhancedSystem = 'You are a code conversion expert. Convert the code to the requested language while maintaining functionality and best practices.';
+    } else if (cmdLower.startsWith('refactor ')) {
+      enhancedSystem = 'You are a refactoring expert. Improve code structure, readability, and maintainability while preserving functionality.';
+    } else if (cmdLower.startsWith('optimize ')) {
+      enhancedSystem = 'You are a performance optimization expert. Improve code efficiency, reduce complexity, and enhance performance.';
+    } else if (cmdLower.startsWith('document ')) {
+      enhancedSystem = 'You are a documentation expert. Generate clear, comprehensive documentation including usage examples and API references.';
+    } else if (cmdLower.startsWith('review ')) {
+      enhancedSystem = 'You are a senior code reviewer. Provide constructive feedback on code quality, potential issues, and improvement suggestions.';
     }
   }
 
@@ -515,7 +507,11 @@ async function handleClaudeAgentRequest(payload, apiKey) {
     const data = await res.json();
     const newId = `cs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     claudeSessions.set(newId, { messages, lastContent: data.content });
-    if (claudeSessions.size > 20) claudeSessions.delete(claudeSessions.keys().next().value);
+    if (claudeSessions.size > 20) {
+      const evicted = claudeSessions.keys().next().value;
+      console.warn(`[kit] Claude session cache full (${claudeSessions.size}), evicting oldest session: ${evicted}`);
+      claudeSessions.delete(evicted);
+    }
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '';
     const functionCalls = (data.content || []).filter(b => b.type === 'tool_use').map(b => ({ name: b.name, arguments: JSON.stringify(b.input), callId: b.id }));
     return { ok: true, text, functionCalls, responseId: newId };
@@ -828,7 +824,6 @@ function makeImapClient(imap) {
     auth: { user: imap.user, pass: imap.pass },
     logger: false,
     connectionTimeout: 30000,
-    greetingTimeout: 30000,
     socketTimeout: 60000,
     tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' }
   });

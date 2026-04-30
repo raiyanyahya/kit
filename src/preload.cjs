@@ -29,8 +29,6 @@ const api = {
   hasKey: (provider)=> ipcRenderer.invoke('ai:hasKey', provider),
   clearKey: (provider)=> ipcRenderer.invoke('ai:clearKey', provider),
 
-  // Formatting
-  formatPython: (code)=> ipcRenderer.invoke('format:python', code),
   // Detached result window
   openResultWindow: (payload)=> ipcRenderer.invoke('win:open-result', payload),
   // --- Project Search ---

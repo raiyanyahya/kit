@@ -80,6 +80,15 @@ export function _providerFor(model) {
 }
 
 const markdownCache = new Map();
+const MARKDOWN_CACHE_MAX = 80;
+
+function _markdownCacheSet(key, value) {
+  if (markdownCache.size >= MARKDOWN_CACHE_MAX) {
+    markdownCache.delete(markdownCache.keys().next().value);
+  }
+  markdownCache.set(key, value);
+}
+
 export function parseMarkdown(text) {
   if (markdownCache.has(text)) return markdownCache.get(text);
   const escaped = text
@@ -87,6 +96,9 @@ export function parseMarkdown(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+
+  const BLOCK_TAGS = /<\/?(?:h[1-6]|pre|blockquote|hr|ul|ol|li|table|thead|tbody|tr|td|th|div|section|article|header|footer|nav|aside|main|figure|figcaption|details|summary|form|fieldset|legend|dl|dt|dd|address|p)(?:\s[^>]*)?>/gi;
+
   let html = escaped
     .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
@@ -104,14 +116,17 @@ export function parseMarkdown(text) {
     .replace(/^\* (.+)$/gim, '<li>$1</li>')
     .replace(/^- (.+)$/gim, '<li>$1</li>')
     .replace(/^(\d+)\. (.+)$/gim, '<li>$2</li>')
-    .replace(/(<li>.*?<\/li>)(\s*<li>.*?<\/li>)*/gim, '<ul>$&</ul>')
+    .replace(/(<li>[\s\S]*?<\/li>)(\s*<li>[\s\S]*?<\/li>)*/gim, '<ul>$&</ul>')
     .replace(/^&gt; (.+)$/gim, '<blockquote>$1</blockquote>')
     .replace(/^---$/gim, '<hr>')
-    .replace(/\n\n/gim, '</p><p>')
-    .replace(/\n/gim, '<br>');
+    .replace(/\n\n/gim, '\n<PSEP>\n')
+    .replace(/\n/gim, '<br>')
+    .replace(/\n<PSEP>\n/g, '</p><p>');
+
   html = '<p>' + html + '</p>';
-  html = html.replace(/<p><\/p>/gim, '').replace(/<p><br><\/p>/gim, '');
-  if (markdownCache.size > 50) markdownCache.clear();
-  markdownCache.set(text, html);
+  html = html.replace(/<p>\s*(<\/(?:h[1-6]|pre|blockquote|hr|ul|ol|table)[^>]*>)/gi, '$1</p>');
+  html = html.replace(/(<(?:h[1-6]|pre|blockquote|hr|ul|ol|table)[^>]*>)\s*<\/p>/gi, '<p>$1');
+  html = html.replace(/<p><\/p>/gim, '').replace(/<p>\s*<br>\s*<\/p>/gim, '');
+  _markdownCacheSet(text, html);
   return html;
 }

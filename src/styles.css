@@ -104,12 +104,7 @@ body.dark #aiToggle.ai-on{
   gap: 2px;
 }
 
-/* Hide tab bar when empty (no tabs) */
-.tab-bar:empty {
-  display: none;
-  min-height: 0;
-  border-bottom: none;
-}
+
 
 .tab-bar::-webkit-scrollbar {
   display: none;
@@ -1474,52 +1469,9 @@ body.dark .cm-gutters {
   display: block;
 }
 
-/* Terminal spinner */
-.spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-  vertical-align: middle;
-}
-body.dark .spinner { border-color: rgba(255,255,255,0.25); }
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
 /* Terminal: add breathing space between prompt and outputs */
 #termOut { line-height: 1.5; }
 
-
-/* === Improved spinner visibility === */
-#termInWrap .spinner{
-  margin: 0 8px 0 8px;
-}
-.spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid transparent;
-  border-top-color: currentColor;
-  border-right-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-  vertical-align: middle;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-body.dark #termSpinner { color:#fff; }
-body:not(.dark) #termSpinner { color:#111; }
-
-/* Sidebar title color per theme */
-.sidebar-header .title { color:#111; }
-body.dark .sidebar-header .title { color:#e8e8e8; }
-#starredFolderBtn { transition: opacity 0.15s, color 0.15s; color: var(--toolbar-fg); }
-#starredFolderBtn.active { opacity: 1 !important; color: #f59e0b; }
-
-
-/* === High-contrast spinner (theme-aware) === */
 #termInWrap .spinner{ margin:0 8px; }
 .spinner{
   width:16px; height:16px; display:inline-block; border-radius:50%;
@@ -1534,6 +1486,12 @@ body.dark .sidebar-header .title { color:#e8e8e8; }
 @keyframes spin { to { transform: rotate(1turn); } }
 body.dark #termSpinner{ color:#ffffff; }
 body:not(.dark) #termSpinner{ color:#111111; }
+
+/* Sidebar title color per theme */
+.sidebar-header .title { color:#111; }
+body.dark .sidebar-header .title { color:#e8e8e8; }
+#starredFolderBtn { transition: opacity 0.15s, color 0.15s; color: var(--toolbar-fg); }
+#starredFolderBtn.active { opacity: 1 !important; color: #f59e0b; }
 
 
 /* Support image favicons in omni rows */
