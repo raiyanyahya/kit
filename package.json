@@ -54,7 +54,27 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
         }
+      ]
+    },
+    "deb": {
+      "maintainer": "Raiyan Yahya <raiyanyahyadeveloper@gmail.com>",
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
       ]
     },
     "dmg": {

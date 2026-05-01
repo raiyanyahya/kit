@@ -70,9 +70,9 @@ jobs:
           path: dist/*.dmg
           retention-days: 7
 
-  # ── Step 2b: build Linux AppImage ─────────────────────────────────────────
+  # ── Step 2b: build Linux AppImage + deb ───────────────────────────────────
   build-linux:
-    name: Linux AppImage
+    name: Linux (AppImage + deb)
     needs: prepare
     runs-on: ubuntu-latest
 
@@ -102,16 +102,18 @@ jobs:
       - name: Build (minified production bundle)
         run: npm run build:prod
 
-      - name: Package AppImage
+      - name: Package Linux artifacts
         run: npx electron-builder --linux --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppImage
+      - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-appimage
-          path: dist/*.AppImage
+          name: linux-artifacts
+          path: |
+            dist/*.AppImage
+            dist/*.deb
           retention-days: 7
 
   # ── Step 3: publish GitHub Release ────────────────────────────────────────
