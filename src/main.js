@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, sa
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import crypto from 'crypto'
 import { exec, spawn } from 'child_process'
 import { fileURLToPath } from 'url'
 import OpenAI from 'openai'
@@ -117,7 +118,7 @@ function createWindow(){
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true
     }
   })
   win.loadFile(path.join(__dirname, 'index.html'))
@@ -209,19 +210,60 @@ ipcMain.handle('dialog:openFile', async (_e, filters)=>{
   return canceled || !filePaths || !filePaths[0] ? null : filePaths[0];
 });
 
-ipcMain.handle('fs:readFile', async (_e, p)=>{ try{ return { ok:true, data: await fsP.readFile(p,'utf8') } } catch(e){ return { ok:false, error:e.message }}})
-ipcMain.handle('fs:writeFile', async (_e, p, c)=>{ try{ await fsP.writeFile(p,c,'utf8'); return { ok:true } } catch(e){ return { ok:false, error:e.message }}})
-ipcMain.handle('fs:rename', async (_e, o, n)=>{ try{ await fsP.rename(o,n); return {ok:true} } catch(e){ return {ok:false, error:e.message} } })
+// Block fs:* operations on paths that hold credentials or system secrets.
+// Renderer is our own bundle, so this is defense-in-depth: if AI/email content
+// ever achieves XSS in the renderer, exfiltration of these targets is blocked
+// at the IPC boundary regardless. Resolves first so '..' traversal can't bypass.
+function isPathBlocked(p) {
+  if (typeof p !== 'string' || !p) return true;
+  let abs;
+  try { abs = path.resolve(p); } catch (_) { return true; }
+  const norm = process.platform === 'win32' ? abs.toLowerCase() : abs;
+  const home = os.homedir();
+  const userData = app.isReady() ? app.getPath('userData') : null;
+  const homePrefixes = [
+    path.join(home, '.ssh'),
+    path.join(home, '.aws'),
+    path.join(home, '.gnupg'),
+    path.join(home, '.kube'),
+    path.join(home, '.docker'),
+    path.join(home, '.netrc'),
+    path.join(home, '.config', 'gcloud'),
+  ].map(s => process.platform === 'win32' ? s.toLowerCase() : s);
+  for (const pfx of homePrefixes) {
+    if (norm === pfx || norm.startsWith(pfx + path.sep)) return true;
+  }
+  if (userData) {
+    const ud = process.platform === 'win32' ? userData.toLowerCase() : userData;
+    for (const name of ['.kitkey', '.anthropickey', '.emailcreds']) {
+      if (norm === path.join(ud, name)) return true;
+    }
+  }
+  if (process.platform !== 'win32') {
+    const sys = ['/etc/shadow', '/etc/sudoers', '/etc/gshadow', '/root'];
+    for (const pfx of sys) {
+      if (norm === pfx || norm.startsWith(pfx + '/')) return true;
+    }
+  }
+  return false;
+}
+const BLOCKED_PATH_ERR = { ok: false, error: 'Path is restricted' };
+
+ipcMain.handle('fs:readFile', async (_e, p)=>{ if (isPathBlocked(p)) return BLOCKED_PATH_ERR; try{ return { ok:true, data: await fsP.readFile(p,'utf8') } } catch(e){ return { ok:false, error:e.message }}})
+ipcMain.handle('fs:writeFile', async (_e, p, c)=>{ if (isPathBlocked(p)) return BLOCKED_PATH_ERR; try{ await fsP.writeFile(p,c,'utf8'); return { ok:true } } catch(e){ return { ok:false, error:e.message }}})
+ipcMain.handle('fs:rename', async (_e, o, n)=>{ if (isPathBlocked(o) || isPathBlocked(n)) return BLOCKED_PATH_ERR; try{ await fsP.rename(o,n); return {ok:true} } catch(e){ return {ok:false, error:e.message} } })
 ipcMain.handle('os:homedir', async ()=> os.homedir())
-ipcMain.handle('fs:stat', async (_e, p)=>{ try{ const s = await fsP.stat(p); return { ok:true, isDir:s.isDirectory(), isFile:s.isFile() } } catch(e){ return { ok:false, error:e.message } } })
+ipcMain.handle('fs:stat', async (_e, p)=>{ if (isPathBlocked(p)) return BLOCKED_PATH_ERR; try{ const s = await fsP.stat(p); return { ok:true, isDir:s.isDirectory(), isFile:s.isFile() } } catch(e){ return { ok:false, error:e.message } } })
 
 ipcMain.handle('fs:list', async (_e, p)=>{
+  if (isPathBlocked(p)) return BLOCKED_PATH_ERR;
   try {
     const entries = await fsP.readdir(p, { withFileTypes: true });
     return { ok:true, items: entries.map(e=> ({ name: e.name, dir: e.isDirectory() })) }
   } catch(e){ return { ok:false, error: e.message } }
 });
 ipcMain.handle('fs:copyTo', async (_e, src, destDir)=>{
+  if (isPathBlocked(src) || isPathBlocked(destDir)) return BLOCKED_PATH_ERR;
   async function copyRecursive(s,d){
     const st = await fsP.stat(s)
     if(st.isDirectory()){
@@ -233,8 +275,8 @@ ipcMain.handle('fs:copyTo', async (_e, src, destDir)=>{
   }
   try{ const base = path.basename(src); const dest = path.join(destDir, base); await copyRecursive(src,dest); return {ok:true} } catch(e){ return {ok:false, error:e.message} }
 })
-ipcMain.handle('fs:mkdir', async (_e, dir)=>{ try{ await fsP.mkdir(dir, { recursive:true }); return {ok:true} } catch(e){ return {ok:false, error:e.message} } })
-ipcMain.handle('fs:delete', async (_e, p)=>{ try{ const st = await fsP.stat(p); if(st.isDirectory()) await fsP.rm(p, { recursive:true, force:true }); else await fsP.unlink(p); return {ok:true} } catch(e){ return {ok:false, error:e.message} } })
+ipcMain.handle('fs:mkdir', async (_e, dir)=>{ if (isPathBlocked(dir)) return BLOCKED_PATH_ERR; try{ await fsP.mkdir(dir, { recursive:true }); return {ok:true} } catch(e){ return {ok:false, error:e.message} } })
+ipcMain.handle('fs:delete', async (_e, p)=>{ if (isPathBlocked(p)) return BLOCKED_PATH_ERR; try{ const st = await fsP.stat(p); if(st.isDirectory()) await fsP.rm(p, { recursive:true, force:true }); else await fsP.unlink(p); return {ok:true} } catch(e){ return {ok:false, error:e.message} } })
 // Persistent environment variables for terminal session
 const terminalEnv = { ...process.env };
 let runningTermProc = null;
@@ -475,7 +517,14 @@ async function handleClaudeRequest(payload, apiKey) {
   } catch (err) { return { ok: false, error: err?.message || String(err) }; }
 }
 
-const claudeSessions = new Map(); // responseId → { messages, lastContent }
+const claudeSessions = new Map(); // responseId → { messages, lastContent, ts }
+const CLAUDE_SESSION_TTL_MS = 30 * 60 * 1000;
+function sweepClaudeSessions() {
+  const cutoff = Date.now() - CLAUDE_SESSION_TTL_MS;
+  for (const [id, s] of claudeSessions) {
+    if (s.ts < cutoff) claudeSessions.delete(id);
+  }
+}
 
 async function handleClaudeAgentRequest(payload, apiKey) {
   if (!apiKey) return { ok: false, error: 'No Anthropic API key set. Open AI Keys from the toolbar to add one.' };
@@ -515,7 +564,8 @@ async function handleClaudeAgentRequest(payload, apiKey) {
     }
     const data = await res.json();
     const newId = `cs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    claudeSessions.set(newId, { messages, lastContent: data.content });
+    sweepClaudeSessions();
+    claudeSessions.set(newId, { messages, lastContent: data.content, ts: Date.now() });
     if (claudeSessions.size > 20) {
       const evicted = claudeSessions.keys().next().value;
       console.warn(`[kit] Claude session cache full (${claudeSessions.size}), evicting oldest session: ${evicted}`);
@@ -592,6 +642,7 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
   const title = (payload && payload.title) || 'Result';
   const language = (payload && payload.language) || 'javascript';
   const mode = (payload && payload.mode) || 'code'; // 'code' | 'html'
+  const nonce = crypto.randomBytes(16).toString('base64');
   const child = new BrowserWindow({
     width: 900, height: 650, minWidth: 700, minHeight: 450,
     title: title,
@@ -604,7 +655,7 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
   <html>
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src 'self' data:;">
     <title>${title}</title>
     <style>${PRISM_CSS}</style>
     <style>
@@ -748,76 +799,83 @@ ipcMain.handle('win:open-result', async (_e, payload)=>{
     <div class="titlebar">
       <div class="title">${title}</div>
       <div class="window-controls">
-        <button class="icon-btn close" onclick="window.close()" title="Close">
+        <button class="icon-btn close" id="btnClose" title="Close">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
     </div>
     <div class="actions">
-      <button class="btn" onclick="copyContent()" title="Copy to clipboard">
+      <button class="btn" id="btnCopy" title="Copy to clipboard">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         <span>Copy</span>
       </button>
-      <button class="btn" onclick="saveAsFile()" title="Save as file">
+      <button class="btn" id="btnSave" title="Save as file">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
         <span>Save</span>
       </button>
     </div>
     <div class="content" id="content"></div>
     <div class="success-msg" id="successMsg">Copied</div>
-    
-    <script>${PRISM_JS}</script>
-    <script>
-      const mode = '${mode}';
+
+    <script nonce="${nonce}">${PRISM_JS}</script>
+    <script nonce="${nonce}">
+      const mode = ${JSON.stringify(mode)};
       const rawContent = ${JSON.stringify(html)};
+      const language = ${JSON.stringify(language)};
       const contentEl = document.getElementById('content');
       let codeText = '';
 
       if (mode === 'html') {
-        // Render HTML directly (e.g. screenshots, rich content)
-        contentEl.innerHTML = rawContent;
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = rawContent;
+        // Strip any script tags or event handlers from incoming HTML as defense-in-depth.
+        // The CSP nonce already blocks inline script execution, but we remove the nodes
+        // anyway so they cannot be reattached or referenced.
+        tempDiv.querySelectorAll('script,iframe,object,embed').forEach(n => n.remove());
+        tempDiv.querySelectorAll('*').forEach(el => {
+          for (const a of [...el.attributes]) {
+            if (/^on/i.test(a.name)) el.removeAttribute(a.name);
+            if (a.name === 'href' || a.name === 'src') {
+              if (/^javascript:/i.test(a.value.trim())) el.removeAttribute(a.name);
+            }
+          }
+        });
+        contentEl.appendChild(tempDiv);
         codeText = tempDiv.textContent || tempDiv.innerText;
       } else {
-        // Extract plain text and syntax-highlight as code
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = rawContent;
         codeText = tempDiv.textContent || tempDiv.innerText;
 
         const pre = document.createElement('pre');
         const code = document.createElement('code');
-        code.className = 'language-${language}';
+        code.className = 'language-' + language;
         code.textContent = codeText;
         pre.appendChild(code);
         contentEl.appendChild(pre);
         Prism.highlightElement(code);
       }
 
-      function copyContent() {
-        navigator.clipboard.writeText(codeText).then(() => {
-          showSuccess();
-        }).catch(err => {
-        });
-      }
-      
       function showSuccess() {
         const msg = document.getElementById('successMsg');
         msg.classList.add('show');
-        setTimeout(() => {
-          msg.classList.remove('show');
-        }, 1500);
+        setTimeout(() => msg.classList.remove('show'), 1500);
       }
-      
-      function saveAsFile() {
+
+      document.getElementById('btnClose').addEventListener('click', () => window.close());
+      document.getElementById('btnCopy').addEventListener('click', () => {
+        navigator.clipboard.writeText(codeText).then(showSuccess).catch(() => {});
+      });
+      document.getElementById('btnSave').addEventListener('click', () => {
+        const ext = language === 'typescript' ? 'ts' : language === 'python' ? 'py' : 'js';
         const blob = new Blob([codeText], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'generated-tests.test.${language === 'typescript' ? 'ts' : language === 'python' ? 'py' : 'js'}';
+        a.download = 'generated-tests.test.' + ext;
         a.click();
         URL.revokeObjectURL(url);
-      }
+      });
     </script>
   </body>
   </html>`;
