@@ -8,7 +8,7 @@ Kit is not another Electron wrapper with a chat sidebar. It's a ground-up rethin
 
 Built by a developer who got tired of alt-tabbing between twelve apps to do one thing.
 
-![Kit workspace](MediaAssets/kit.gif)
+<img src="MediaAssets/kit.gif" width="100%" alt="Kit workspace">
 
 ---
 
