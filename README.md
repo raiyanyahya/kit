@@ -6,7 +6,7 @@
 
 Kit is not another Electron wrapper with a chat sidebar. It's a ground-up rethink of what a developer workspace looks like when AI is not a feature you reach for but the nervous system connecting every tool you already use. The editor, browser, terminal, git, email, calendar, whiteboard and an autonomous agent all share context. Nothing is siloed. Everything talks to everything.
 
-Built by a developer who got tired of alt-tabbing between twelve apps to do one thing.
+Built by a developer who got likes to build things.
 
 <img src="MediaAssets/kit.gif" width="100%" alt="Kit workspace">
 
