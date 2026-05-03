@@ -1,6 +1,6 @@
 {
   "name": "kit",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "private": true,
   "type": "module",
   "main": "src/main.js",
@@ -19,7 +19,12 @@
     "icon": "build/icons/png/512x512.png",
     "afterPack": "./build/afterPack.cjs",
     "asar": true,
-    "extraResources": [{ "from": "icons", "to": "icons" }],
+    "extraResources": [
+      {
+        "from": "icons",
+        "to": "icons"
+      }
+    ],
     "files": [
       "src/**/*",
       "!src/renderer.js",
