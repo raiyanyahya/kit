@@ -108,7 +108,7 @@ export function parseMarkdown(text) {
     .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
     .replace(/`([^`\n]+)`/gim, '<code>$1</code>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, (_, t, u) => {
-      const safe = /^javascript:/i.test(u) || /^data:/i.test(u) ? '#' : u;
+      const safe = /^https?:|^#|^\//i.test(u) ? u : '#';
       return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${t}</a>`;
     })
     .replace(/^\* (.+)$/gim, '<li>$1</li>')

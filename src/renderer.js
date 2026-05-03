@@ -105,7 +105,8 @@ function _buildModelPicker(selectEl) {
     const p = _providerFor(val);
     const grp = _MODEL_GROUPS.find(g => g.provider === p);
     const lbl = grp?.models.find(m => m.v === val)?.l || val;
-    trigger.innerHTML = `<span class="mpk-icon">${_BRAND[p]}</span><span class="mpk-name">${lbl}</span>${_chevron}`;
+    trigger.innerHTML = `<span class="mpk-icon">${_BRAND[p]}</span><span class="mpk-name"></span>${_chevron}`;
+    trigger.querySelector('.mpk-name').textContent = lbl;
   };
   _setTrigger(init);
   const menu = document.createElement('div');
@@ -1760,6 +1761,7 @@ function openInWebview(target) {
   if (!wv || !view) return;
   const url = toUrl(target);
   if (!url) return;
+  if (!/^(https?:|about:|file:)/i.test(url)) return;
   view.classList.remove('hidden'); omniClear();
   wv.setAttribute('src', url);
   try {
@@ -1867,7 +1869,8 @@ function renderBrowserSidebar() {
       for (const t of tabsArr) {
         const row = document.createElement('div');
         row.className = 'row';
-        row.innerHTML = `<img class="tab-fav" src="${t.favicon || ''}" alt="" /><span class="title"></span><button class="star" title="Bookmark"><svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1l1.56 4H13l-3.56 2.6 1.36 4.18L7 9.32l-3.8 2.28 1.36-4.18L.98 5H5.44L7 1z"/></svg></button><button class="close" title="Close">✕</button>`;
+        row.innerHTML = `<img class="tab-fav" alt="" /><span class="title"></span><button class="star" title="Bookmark"><svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1l1.56 4H13l-3.56 2.6 1.36 4.18L7 9.32l-3.8 2.28 1.36-4.18L.98 5H5.44L7 1z"/></svg></button><button class="close" title="Close">✕</button>`;
+        row.querySelector('.tab-fav').src = t.favicon || '';
         row.querySelector('.title').textContent = t.title || t.url || 'New Tab';
         row.title = t.url || t.title || '';
         const starBtn = row.querySelector('.star');
@@ -4035,7 +4038,8 @@ document.addEventListener('keydown', async (e) => {
     if (!cwd) return;
     const pattern = `function ${word}|const ${word} =|let ${word} =|var ${word} =|class ${word}|def ${word}|export function ${word}|${word}\\s*\\(`;
     try {
-      const result = await window.kit.exec(cwd, `grep -rn -E "${pattern.replace(/"/g, '\\"')}" --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.java" --include="*.rb" 2>/dev/null | head -20`);
+      const escapedPattern = pattern.replace(/'/g, "'\\''");
+      const result = await window.kit.exec(cwd, `grep -rn -E '${escapedPattern}' --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.java" --include="*.rb" 2>/dev/null | head -20`);
       await showDefinitionResults(word, result.output || result.stdout || '');
     } catch (err) {
       const out = document.getElementById('termOut');
@@ -4324,7 +4328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!checked.length) { alert('No files selected.'); return; }
     const addCmd = checked.map(f => `git add -- "${f}"`).join(' && ');
     const r1 = await window.kit.exec(termCwd, addCmd);
-    const r2 = await window.kit.exec(termCwd, `git commit -m "${msg.replace(/"/g, '\\"')}"`);
+    const r2 = await window.kit.exec(termCwd, `git commit -m '${msg.replace(/'/g, "'\\''")}'`);
     _gitLog(((r1.output || '') + '\n' + (r2.output || '')).trim());
     if (document.getElementById('gitCommitMsg')) document.getElementById('gitCommitMsg').value = '';
     await refreshGitPanel();
