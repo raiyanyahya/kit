@@ -125,6 +125,6 @@
     "mailparser": "^3.9.3",
     "node-pty": "^1.0.0",
     "nodemailer": "^8.0.7",
-    "openai": "^6.35.0"
+    "openai": "^6.36.0"
   }
 }
