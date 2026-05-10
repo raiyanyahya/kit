@@ -229,6 +229,15 @@ function isPathBlocked(p) {
     path.join(home, '.docker'),
     path.join(home, '.netrc'),
     path.join(home, '.config', 'gcloud'),
+    path.join(home, '.git-credentials'),
+    path.join(home, '.npmrc'),
+    path.join(home, '.pypirc'),
+    path.join(home, '.gem', 'credentials'),
+    path.join(home, '.cargo', 'credentials'),
+    path.join(home, '.config', 'gh'),
+    path.join(home, '.terraform.d'),
+    path.join(home, '.kdbx'),
+    path.join(home, '.keyring'),
   ].map(s => process.platform === 'win32' ? s.toLowerCase() : s);
   for (const pfx of homePrefixes) {
     if (norm === pfx || norm.startsWith(pfx + path.sep)) return true;

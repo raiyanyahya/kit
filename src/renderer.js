@@ -5732,6 +5732,8 @@ async function agentExecuteTool(name, argsObj) {
         if (DANGEROUS.test(cmd)) return 'Blocked: command matches dangerous pattern. Use a safer approach.';
         if (cmd.includes('/dev/') || cmd.includes('/etc/passwd') || cmd.includes('/etc/shadow'))
           return 'Blocked: access to system files is not allowed.';
+        const SENSITIVE = /(?:\.ssh\/|\.aws\/|\.gnupg\/|\.kube\/|\.docker\/|\.netrc|\.git-credentials|\.npmrc|\.pypirc|\.gem\/credentials|\.cargo\/credentials|\.config\/gh\/|\.terraform\.d\/|identity|id_rsa|id_ed25519|credentials\.ini)/i;
+        if (SENSITIVE.test(cmd)) return 'Blocked: access to credential files is not allowed.';
         const cwd = termCwd || '/';
         const res = await window.kit.exec(cwd, cmd);
         return res.output || '(no output)';
