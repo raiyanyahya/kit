@@ -10,3 +10,4 @@ src/renderer.bundle.js.map
 .vscode/
 .env
 .env.*
+.kilo/
