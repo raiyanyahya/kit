@@ -1,6 +1,6 @@
 {
   "name": "kit",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
   "main": "src/main.js",
@@ -94,14 +94,14 @@
     "compression": "normal"
   },
   "devDependencies": {
-    "electron": "^40.9.3",
-    "electron-builder": "^26.8.1",
-    "esbuild": "^0.28.0",
-    "jest": "^30.3.0",
-    "jest-environment-jsdom": "^30.3.0"
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1"
   },
   "dependencies": {
-    "@codemirror/commands": "6.10.3",
+    "@codemirror/commands": "6.10.4",
     "@codemirror/lang-cpp": "6.0.3",
     "@codemirror/lang-css": "6.3.1",
     "@codemirror/lang-html": "6.4.11",
@@ -115,16 +115,16 @@
     "@codemirror/lang-sql": "6.10.0",
     "@codemirror/lang-xml": "6.1.0",
     "@codemirror/lang-yaml": "6.1.3",
-    "@codemirror/language": "6.12.3",
-    "@codemirror/legacy-modes": "6.5.2",
-    "@codemirror/search": "6.7.0",
-    "@codemirror/state": "6.6.0",
+    "@codemirror/language": "6.12.4",
+    "@codemirror/legacy-modes": "6.5.3",
+    "@codemirror/search": "6.7.1",
+    "@codemirror/state": "6.7.1",
     "@codemirror/theme-one-dark": "6.1.3",
-    "@codemirror/view": "6.41.1",
-    "imapflow": "^1.3.3",
-    "mailparser": "^3.9.3",
+    "@codemirror/view": "6.43.6",
+    "imapflow": "^1.4.7",
+    "mailparser": "^3.9.14",
     "node-pty": "^1.0.0",
-    "nodemailer": "^8.0.7",
-    "openai": "^6.36.0"
+    "nodemailer": "^9.0.3",
+    "openai": "^6.46.0"
   }
 }
